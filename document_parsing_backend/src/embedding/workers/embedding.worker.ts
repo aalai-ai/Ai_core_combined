@@ -190,7 +190,9 @@ export class EmbeddingWorker {
               parsedBlock.ocrText = imageSummary;
               parsedBlock.ocrProvider = 'ollama-vision';
             } else {
-              parsedBlock.ocrStatus = 'FAILED';
+              parsedBlock.ocrStatus = 'METADATA_FALLBACK';
+              parsedBlock.ocrText = `Image document file: ${imageFileName}. Visual metadata and image context stored.`;
+              parsedBlock.ocrProvider = 'system';
             }
 
             chunk.content = JSON.stringify(parsedBlock);

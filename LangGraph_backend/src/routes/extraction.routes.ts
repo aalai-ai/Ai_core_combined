@@ -63,12 +63,36 @@ router.post("/upload", upload.single("file"), async (req: Request, res: Response
 
     const uploadResult = await response.json() as { documentId: string; status: string; message: string };
 
-    console.log(`✅ File '${filename}' successfully forwarded. Document ID: ${uploadResult.documentId}`);
+    console.log(`✅ File '${filename}' successfully forwarded to Document Parsing Backend. Document ID: ${uploadResult.documentId}`);
+
+    // Poll for document processing completion (up to 12 seconds) to report actual chunks_count
+    let chunksCount = 0;
+    const startTime = Date.now();
+    const pollTimeoutMs = 12000;
+
+    while (Date.now() - startTime < pollTimeoutMs) {
+      try {
+        const statusRes = await fetch(`${parserUrl}/documents/${uploadResult.documentId}/index-status`);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json() as any;
+          if (statusData.stats && typeof statusData.stats.totalChunks === 'number') {
+            chunksCount = statusData.stats.totalChunks;
+          }
+          if (statusData.status === 'VECTOR_SYNC_COMPLETED' || statusData.status === 'COMPLETED' || (statusData.stats && statusData.stats.syncedChunks > 0)) {
+            break;
+          }
+        }
+      } catch (pollErr) {
+        // Silently retry polling
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
     return res.status(200).json({
       message: "File ingested successfully",
       documentId: uploadResult.documentId,
       filename,
-      chunks_count: 0
+      chunks_count: chunksCount
     });
 
   } catch (error: any) {
