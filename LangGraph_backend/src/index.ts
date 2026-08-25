@@ -38,9 +38,28 @@ app.use("/uploads", async (req, res, next) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.send("Hello from Plixy LangGraph Backend!");
+});
+
 app.use("/api/users", userRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/extraction", extractionRoutes);
+
+// Global error handler to return JSON errors with CORS headers
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("❌ Global error handler caught an error:", err);
+  
+  // Explicitly ensure CORS headers are set on errors
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    error: err.message || "Internal server error",
+  });
+});
 
 const server = http.createServer(app);
 

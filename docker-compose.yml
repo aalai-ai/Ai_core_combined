@@ -93,6 +93,7 @@ services:
       - OLLAMA_MODEL=qwen3.5:9b
       - OLLAMA_DOC_MODEL=qwen3.5:9b
       - OLLAMA_PLC_MODEL=llama3.1:8b
+      - DOCUMENT_PARSER_URL=http://document_parsing_backend:3000
     depends_on:
       - mongodb
     extra_hosts:
@@ -105,9 +106,9 @@ services:
       context: ./Plixy_frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${DOCKER_VITE_API_URL:-http://192.168.2.213:5100}
-        - VITE_API_BASE_URL=${DOCKER_VITE_API_BASE_URL:-http://192.168.2.213:5100}
-        - VITE_SOCKET_URL=${DOCKER_VITE_SOCKET_URL:-http://192.168.2.213:5100}
+        - VITE_API_URL=${DOCKER_VITE_API_URL:-http://106.51.59.63:5100}
+        - VITE_API_BASE_URL=${DOCKER_VITE_API_BASE_URL:-http://106.51.59.63:5100}
+        - VITE_SOCKET_URL=${DOCKER_VITE_SOCKET_URL:-http://106.51.59.63:5100}
     container_name: plixy_frontend
     ports:
       - "5003:80"

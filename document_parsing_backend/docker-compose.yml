@@ -24,11 +24,11 @@ services:
       - WORKER_CONCURRENCY=2
       - MAX_UPLOAD_SIZE=52428800
       - STORAGE_PROVIDER=minio
-      - MINIO_ENDPOINT=http://192.168.2.213:9998
+      - MINIO_ENDPOINT=http://192.168.2.11:9998
       - MINIO_ACCESS_KEY=hexradmin
       - MINIO_SECRET_KEY=hexradmin
       - MINIO_BUCKET=ai-upload-doc
-      - OLLAMA_BASE_URL=http://192.168.2.210:11434
+      - OLLAMA_BASE_URL=http://192.168.2.10:11434
     depends_on:
       - mongodb
       - redis

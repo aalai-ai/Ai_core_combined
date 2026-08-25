@@ -44,7 +44,7 @@ export const uploadFile = async (file: File) => {
   formData.append("file", file);
   const response = await api.post("/extraction/upload", formData, {
     headers: {
-      "Content-Type": "multipart/form-data",
+      "Content-Type": undefined,
     },
   });
   return response.data;

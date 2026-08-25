@@ -11,11 +11,11 @@ services:
     environment:
       - PORT=5100
       - MONGO_URI=mongodb://mongodb:27017/ai-chat
-      - OLLAMA_BASE_URL=http://192.168.2.210:11434
+      - OLLAMA_BASE_URL=http://192.168.2.10:11434
       - OLLAMA_MODEL=qwen3.5:9b
       - OLLAMA_DOC_MODEL=qwen3.5:9b
       - OLLAMA_PLC_MODEL=llama3.1:8b
-      - DOCUMENT_PARSER_URL=http://192.168.2.213:3000
+      - DOCUMENT_PARSER_URL=http://192.168.2.11:3000
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

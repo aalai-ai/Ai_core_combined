@@ -6,9 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${DOCKER_VITE_API_URL:-http://192.168.2.213:5100}
-        - VITE_API_BASE_URL=${DOCKER_VITE_API_BASE_URL:-http://192.168.2.213:5100}
-        - VITE_SOCKET_URL=${DOCKER_VITE_SOCKET_URL:-http://192.168.2.213:5100}
+        - VITE_API_URL=${DOCKER_VITE_API_URL:-http://106.51.59.63:5100}
+        - VITE_API_BASE_URL=${DOCKER_VITE_API_BASE_URL:-http://106.51.59.63:5100}
+        - VITE_SOCKET_URL=${DOCKER_VITE_SOCKET_URL:-http://106.51.59.63:5100}
     image: plixy-frontend:latest
     ports:
       - "5003:80"
