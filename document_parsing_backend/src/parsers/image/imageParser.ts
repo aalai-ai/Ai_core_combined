@@ -6,6 +6,7 @@ import { readFileToBuffer } from '../../utils/fileReader';
 import { BadRequestError } from '../../utils/errors';
 import { ImageExtractor } from './imageExtractor';
 import { ImageNormalizer } from '../common/imageNormalizer';
+import path from 'path';
 
 export class ImageParser implements DocumentParser {
   /**
@@ -33,7 +34,7 @@ export class ImageParser implements DocumentParser {
       throw new BadRequestError(`Invalid or corrupted image file: ${err.message}`);
     }
 
-    const sections = ImageNormalizer.normalizeImage(metadata, context.originalFileName);
+    const sections = ImageNormalizer.normalizeImage(metadata, path.basename(context.filePath));
 
     return {
       documentId: context.documentId,
