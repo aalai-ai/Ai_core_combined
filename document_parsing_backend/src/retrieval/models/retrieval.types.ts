@@ -29,6 +29,7 @@ export interface SearchOptions {
 export interface RetrievalResult {
   documentId: string;
   chunkId: string;
+  contentType?: string;
   content: string;
   score: number;
   title: string;

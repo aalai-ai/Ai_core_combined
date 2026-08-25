@@ -2,13 +2,15 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import path from 'path';
+import { MinioService } from './utils/minio';
 import { logger } from './utils/logger';
 import { NotFoundError } from './utils/errors';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { correlationMiddleware } from './middlewares/correlation.middleware';
 import { globalIpRateLimiter } from './middlewares/rateLimit.middleware';
 import { authMiddleware } from './middlewares/auth.middleware';
-import { securityConfig } from './config/config';
+import { securityConfig, config } from './config/config';
 
 // Import routers
 import documentRoutes from './routes/document.routes';
@@ -63,6 +65,29 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // 11. Mount Business Routes
+app.use('/uploads', async (req, res, next) => {
+  if (config.storageProvider === 'minio') {
+    try {
+      const minio = MinioService.getInstance();
+      const relativeKey = req.path.replace(/^\/+/, ''); // e.g. "original/uuid.png"
+      logger.info(`[App] Streaming file from MinIO: ${relativeKey}`);
+      const buffer = await minio.getObjectBuffer(relativeKey);
+      
+      const ext = path.extname(relativeKey).toLowerCase();
+      let contentType = 'application/octet-stream';
+      if (ext === '.png') contentType = 'image/png';
+      else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+      else if (ext === '.pdf') contentType = 'application/pdf';
+      
+      res.setHeader('Content-Type', contentType);
+      res.send(buffer);
+    } catch (err) {
+      next(err);
+    }
+  } else {
+    next();
+  }
+}, express.static(config.uploadsDir));
 app.use('/documents', documentRoutes);
 app.use('/retrieval', retrievalRoutes);
 app.use('/rag', ragRoutes);

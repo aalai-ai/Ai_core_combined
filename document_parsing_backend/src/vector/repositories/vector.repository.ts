@@ -46,7 +46,22 @@ export class VectorRepository {
 
   public async ensureCollection(dimensions: number): Promise<void> {
     const exists = await this.provider.collectionExists(this.collection);
-    if (!exists) {
+    if (exists) {
+      try {
+        const info = await this.provider.getCollectionInfo(this.collection);
+        if (info && info.dimensions !== undefined && info.dimensions !== dimensions) {
+          logger.warn(`[Vector Repository] Collection '${this.collection}' dimension mismatch (Existing: ${info.dimensions}, Required: ${dimensions}). Recreating collection.`);
+          await this.provider.deleteCollection(this.collection);
+          await this.provider.createCollection(
+            this.collection,
+            dimensions,
+            config.distanceMetric || 'Cosine'
+          );
+        }
+      } catch (err: any) {
+        logger.error(`[Vector Repository] Failed to verify collection dimensions: ${err.message}`);
+      }
+    } else {
       logger.info(`[Vector Repository] Collection '${this.collection}' does not exist. Creating it.`);
       await this.provider.createCollection(
         this.collection,

@@ -27,7 +27,7 @@ export interface VectorProvider {
     limit: number,
     filter?: Record<string, any>
   ): Promise<SearchResult[]>;
-  getCollectionInfo(collectionName: string): Promise<{ pointsCount: number; status: string }>;
+  getCollectionInfo(collectionName: string): Promise<{ pointsCount: number; status: string; dimensions?: number }>;
 }
 
 export default VectorProvider;

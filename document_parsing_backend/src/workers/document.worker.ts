@@ -31,6 +31,7 @@ export class DocumentWorker {
         connection,
         concurrency: config.workerConcurrency || 1,
         prefix: config.queuePrefix,
+        lockDuration: 300000, // 5 minutes to prevent lock loss during CPU-intensive PDF parsing
       }
     );
 

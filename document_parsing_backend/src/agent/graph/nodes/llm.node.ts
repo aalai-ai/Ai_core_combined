@@ -1,5 +1,5 @@
 import { AgentState } from '../state';
-import { OpenAIProvider } from '../../../rag/providers/openai.provider';
+import { OllamaProvider } from '../../../rag/providers/ollama.provider';
 import { config } from '../../../config/config';
 import { logger } from '../../../utils/logger';
 
@@ -14,7 +14,7 @@ export async function llmNode(state: AgentState): Promise<Partial<AgentState>> {
   }
 
   // 2. Otherwise generate response using LLM provider
-  const provider = new OpenAIProvider();
+  const provider = new OllamaProvider();
   
   let prompt = '';
   const messagesStr = (state.messages || [])

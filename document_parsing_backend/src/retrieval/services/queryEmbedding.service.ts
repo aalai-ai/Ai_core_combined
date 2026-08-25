@@ -1,12 +1,13 @@
-import { OpenAIEmbeddingProvider } from '../../embedding/providers/openaiEmbedding.provider';
+import { EmbeddingProvider } from '../../embedding/providers/embeddingProvider.interface';
+import { OllamaEmbeddingProvider } from '../../embedding/providers/ollamaEmbedding.provider';
 import { RetrievalCache } from '../cache/retrieval.cache';
 import { logger } from '../../utils/logger';
 
 export class QueryEmbeddingService {
-  private provider: OpenAIEmbeddingProvider;
+  private provider: EmbeddingProvider;
   private cache: RetrievalCache;
 
-  constructor(provider = new OpenAIEmbeddingProvider()) {
+  constructor(provider: EmbeddingProvider = new OllamaEmbeddingProvider()) {
     this.provider = provider;
     this.cache = RetrievalCache.getInstance();
   }

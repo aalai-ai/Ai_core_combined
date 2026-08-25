@@ -1,7 +1,7 @@
 import '../utils/canvasMock';
 import mongoose from 'mongoose';
 import { EmbeddingProvider } from '../embedding/providers/embeddingProvider.interface';
-import { OpenAIEmbeddingProvider } from '../embedding/providers/openaiEmbedding.provider';
+import { OllamaEmbeddingProvider } from '../embedding/providers/ollamaEmbedding.provider';
 import { EmbeddingService } from '../embedding/services/embedding.service';
 import { EmbeddingQueue } from '../embedding/queue/embedding.queue';
 import { EmbeddingWorker } from '../embedding/workers/embedding.worker';
@@ -64,13 +64,13 @@ async function runTests() {
     assert(false, `Test 1 failed: ${err}`);
   }
 
-  // --- Test 2: OpenAI Provider Mock Mode ---
-  console.log('\nTest 2: OpenAI Provider (Mock Mode when api key is not set or placeholder)');
+  // --- Test 2: Ollama Provider Mock Mode ---
+  console.log('\nTest 2: Ollama Provider (Mock Mode when Ollama is offline or in development/test)');
   try {
-    const provider = new OpenAIEmbeddingProvider();
+    const provider = new OllamaEmbeddingProvider();
     const result = await provider.generateEmbeddings(['chunk 1', 'chunk 2']);
     assert(result.length === 2, 'Generated mock embeddings for 2 items');
-    assert(result[0] && result[0].length === 1536, 'Mock vector has correct 1536 dimension size');
+    assert(result[0] && result[0].length === 768, 'Mock vector has correct 768 dimension size');
   } catch (err) {
     assert(false, `Test 2 failed: ${err}`);
   }
@@ -205,8 +205,8 @@ async function runTests() {
 
     // Verify document status in MongoDB
     const updatedDoc = await docRepo.findByDocumentId(testDocId);
-    assert(updatedDoc?.status === DocumentStatus.EMBEDDING_COMPLETED, 'Document status updated to EMBEDDING_COMPLETED');
-    assert(updatedDoc?.progress === 100, 'Document progress updated to 100%');
+    assert(updatedDoc?.status === DocumentStatus.VECTOR_SYNC_PENDING, 'Document status updated to VECTOR_SYNC_PENDING');
+    assert(updatedDoc?.progress === 95, 'Document progress updated to 95%');
 
     // Verify chunks status in MongoDB
     const updatedChunks = await chunkRepo.findByDocument(testDocId);

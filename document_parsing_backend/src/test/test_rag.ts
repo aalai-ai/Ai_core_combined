@@ -5,7 +5,7 @@ import { QueryProcessor } from '../rag/services/queryProcessor.service';
 import { TokenBudgetManager } from '../rag/services/tokenBudgetManager.service';
 import { ContextBuilder } from '../rag/services/contextBuilder.service';
 import { PromptBuilder } from '../rag/services/promptBuilder.service';
-import { OpenAIProvider } from '../rag/providers/openai.provider';
+import { OllamaProvider } from '../rag/providers/ollama.provider';
 import { RAGService, RAGMetricsTracker } from '../rag/services/rag.service';
 import { RetrievalCache } from '../retrieval/cache/retrieval.cache';
 import { ChunkModel } from '../chunking/models/documentChunk';
@@ -112,10 +112,10 @@ async function runTests() {
     assert(false, `Test 4 failed: ${err}`);
   }
 
-  // --- Test 5: OpenAIProvider Mock fallback ---
+  // --- Test 5: OllamaProvider Mock fallback ---
   console.log('\nTest 5: LLM Provider Abstraction & Mock Response');
   try {
-    const provider = new OpenAIProvider();
+    const provider = new OllamaProvider();
     const response = await provider.generateResponse('Test prompt');
     assert(response.answer.includes('[Mock Answer]'), 'Provider returned simulated mock response');
     assert(response.tokenUsage.promptTokens > 0, 'Returned estimated prompt tokens');
@@ -160,9 +160,9 @@ async function runTests() {
         title: 'Technical Specification',
         tokenEstimate: 10,
         characterCount: 40,
-        embedding: Array(1536).fill(0.9),
+        embedding: Array(768).fill(0.9),
         embeddingStatus: 'COMPLETED',
-        embeddingDimensions: 1536,
+        embeddingDimensions: 768,
         vectorSyncStatus: 'SYNCED',
         pageStart: 1,
         pageEnd: 1,
@@ -173,23 +173,23 @@ async function runTests() {
     // 3. Vector Repository Setup
     const qProvider = new QdrantVectorProvider();
     const vectorRepo = new VectorRepository(qProvider);
-    await vectorRepo.ensureCollection(1536);
+    await vectorRepo.ensureCollection(768);
 
     await vectorRepo.upsert([
       {
         id: 'uuid-tech-0',
-        vector: Array(1536).fill(0.9),
+        vector: Array(768).fill(0.9),
         payload: { documentId: testDocId, chunkId: 'chunk-tech-0', title: 'Technical Specification', processingVersion: 1, pageStart: 1 }
       },
     ]);
 
     // Instantiate RetrievalService
     const mockEmbed = new QueryEmbeddingService();
-    mockEmbed.generateEmbedding = async () => ({ vector: Array(1536).fill(0.9), latencyMs: 1 });
+    mockEmbed.generateEmbedding = async () => ({ vector: Array(768).fill(0.9), latencyMs: 1 });
     const retrievalService = new RetrievalService(vectorRepo, mockEmbed, new PassThroughReranker());
 
     // Instantiate RAGService
-    const ragService = new RAGService(retrievalService, new OpenAIProvider());
+    const ragService = new RAGService(retrievalService, new OllamaProvider());
 
     // 4. Generate answer (cache miss)
     const ragResponse1 = await ragService.generateAnswer('How much RAM is supported?', { documentId: testDocId });

@@ -12,6 +12,10 @@ import { ChunkModel } from '../../chunking/models/documentChunk';
 import { logger } from '../../utils/logger';
 import { config } from '../../config/config';
 import { VectorQueue } from '../../vector/queue/vector.queue';
+import { LlamaVisionService } from '../../services/llamaVision.service';
+import { MinioService } from '../../utils/minio';
+import fs from 'fs';
+import path from 'path';
 
 import { runWithGeneratedContext, getRequestId, getCorrelationId } from '../../logging/correlation';
 
@@ -38,6 +42,7 @@ export class EmbeddingWorker {
         connection,
         concurrency: config.workerConcurrency || 1,
         prefix: config.queuePrefix,
+        lockDuration: 300000, // 5 minutes to prevent lock loss during long LLaMA Vision queries
       }
     );
 
@@ -90,8 +95,121 @@ export class EmbeddingWorker {
           { $set: { embeddingStatus: ChunkEmbeddingStatus.PROCESSING } }
         );
 
+        // 4.5 Process Tables and Images with LLaMA 3.2 Vision
+        const llamaVisionService = new LlamaVisionService();
+        for (const chunk of chunks) {
+          if (chunk.contentType === 'TABLE') {
+            logger.info(`[Embedding Worker] Analyzing table chunk ${chunk.chunkId} using LLaMA 3.2 Vision`);
+            const tableSummary = await llamaVisionService.describeTable(chunk.content);
+            if (tableSummary) {
+              chunk.content = chunk.content + "\n\nTable Description & Analysis:\n" + tableSummary;
+              logger.info(`[Embedding Worker] Enriched table chunk ${chunk.chunkId} with summary.`);
+            }
+          } else if (chunk.contentType === 'IMAGE') {
+            logger.info(`[Embedding Worker] Analyzing image chunk ${chunk.chunkId} using LLaMA 3.2 Vision`);
+            let imagePath = '';
+            let tempFilePath = '';
+            let imageFileName = '';
+
+            try {
+              const imageBlock = JSON.parse(chunk.content);
+              imageFileName = imageBlock.fileName || (chunk.metadata && chunk.metadata.fileName) || '';
+            } catch (err) {
+              imageFileName = (chunk.metadata && chunk.metadata.fileName) || '';
+            }
+
+            if (!imageFileName) {
+              logger.warn(`[Embedding Worker] Image filename missing for chunk ${chunk.chunkId}. Skipping LLaMA Vision.`);
+              continue;
+            }
+
+            const imageKey = imageFileName.startsWith('original/') ? imageFileName : `original/${imageFileName}`;
+            (chunk as any).fileName = imageKey;
+
+            try {
+              if (config.storageProvider === 'minio') {
+                logger.info(`[Embedding Worker] Downloading image from MinIO: ${imageKey}`);
+                const minio = MinioService.getInstance();
+                const fileBuffer = await minio.getObjectBuffer(imageKey);
+                
+                const tempDir = path.resolve(config.uploadsDir, 'temp');
+                if (!fs.existsSync(tempDir)) {
+                  fs.mkdirSync(tempDir, { recursive: true });
+                }
+                
+                const ext = path.extname(imageFileName).toLowerCase() || '.png';
+                tempFilePath = path.join(tempDir, `${chunk.chunkId}${ext}`);
+                await fs.promises.writeFile(tempFilePath, fileBuffer);
+                imagePath = tempFilePath;
+              } else {
+                const pathDirect = path.resolve(config.uploadsDir, imageFileName);
+                const pathRelative = path.resolve(path.dirname(doc.filePath), imageFileName);
+                
+                if (fs.existsSync(pathDirect)) {
+                  imagePath = pathDirect;
+                } else if (fs.existsSync(pathRelative)) {
+                  imagePath = pathRelative;
+                }
+              }
+            } catch (err: any) {
+              logger.error(`[Embedding Worker] Failed to resolve/download image: ${err.message}`);
+            }
+
+            let imageSummary = '';
+            if (imagePath && fs.existsSync(imagePath)) {
+              imageSummary = await llamaVisionService.describeImage(imagePath);
+              
+              // Clean up temp file if created
+              if (tempFilePath && fs.existsSync(tempFilePath)) {
+                try {
+                  await fs.promises.unlink(tempFilePath);
+                  logger.debug(`[Embedding Worker] Cleaned up temp image file: ${tempFilePath}`);
+                } catch (cleanupErr) {
+                  // ignore
+                }
+              }
+            } else {
+              logger.warn(`[Embedding Worker] Image file not found or document is not an image for chunk ${chunk.chunkId}. Generating description from metadata.`);
+              imageSummary = await llamaVisionService.describeTable(`Image Metadata: ${chunk.content}`);
+            }
+
+            let parsedBlock: any = {};
+            try {
+              parsedBlock = JSON.parse(chunk.content);
+            } catch (err) {
+              parsedBlock = {
+                fileName: imageFileName,
+                width: chunk.metadata?.width || 0,
+                height: chunk.metadata?.height || 0,
+                ocrStatus: 'NOT_PROCESSED'
+              };
+            }
+
+            if (imageSummary) {
+              parsedBlock.ocrStatus = 'PROCESSED';
+              parsedBlock.ocrText = imageSummary;
+              parsedBlock.ocrProvider = 'ollama-vision';
+            } else {
+              parsedBlock.ocrStatus = 'FAILED';
+            }
+
+            chunk.content = JSON.stringify(parsedBlock);
+            logger.info(`[Embedding Worker] Updated image chunk ${chunk.chunkId} content with OCR status: ${parsedBlock.ocrStatus}`);
+          }
+        }
+
         // 5. Generate embeddings
-        const texts = chunks.map(c => c.content);
+        const texts = chunks.map(c => {
+          if (c.contentType === 'IMAGE') {
+            try {
+              const block = JSON.parse(c.content);
+              return block.ocrText || c.content;
+            } catch (e) {
+              return c.content;
+            }
+          }
+          return c.content;
+        });
         const start = Date.now();
         const results = await this.embeddingService.generateEmbeddings(texts);
         const latency = Date.now() - start;
@@ -101,18 +219,26 @@ export class EmbeddingWorker {
           const res = results[index];
           const embedding = res?.embedding || [];
           const dimensions = res?.dimensions || config.vectorDimensions || 768;
+          
+          const updateFields: any = {
+            content: chunk.content,
+            embedding: embedding,
+            embeddingModel: config.embeddingModel,
+            embeddingVersion: processingVersion,
+            embeddingCreatedAt: new Date(),
+            embeddingStatus: ChunkEmbeddingStatus.COMPLETED,
+            embeddingDimensions: dimensions,
+          };
+          
+          if (chunk.contentType === 'IMAGE' && (chunk as any).fileName) {
+            updateFields['metadata.fileName'] = (chunk as any).fileName;
+          }
+
           return {
             updateOne: {
               filter: { chunkId: chunk.chunkId },
               update: {
-                $set: {
-                  embedding: embedding,
-                  embeddingModel: config.embeddingModel,
-                  embeddingVersion: processingVersion,
-                  embeddingCreatedAt: new Date(),
-                  embeddingStatus: ChunkEmbeddingStatus.COMPLETED,
-                  embeddingDimensions: dimensions,
-                },
+                $set: updateFields,
               },
             },
           };

@@ -1,6 +1,6 @@
 import { RetrievalService } from '../../retrieval/services/retrieval.service';
 import { LLMProvider } from '../providers/llmProvider.interface';
-import { OpenAIProvider } from '../providers/openai.provider';
+import { OllamaProvider } from '../providers/ollama.provider';
 import { QueryProcessor } from './queryProcessor.service';
 import { TokenBudgetManager } from './tokenBudgetManager.service';
 import { ContextBuilder } from './contextBuilder.service';
@@ -77,7 +77,7 @@ export class RAGService {
 
   constructor(
     retrievalService = new RetrievalService(),
-    llmProvider: LLMProvider = new OpenAIProvider(),
+    llmProvider: LLMProvider = new OllamaProvider(),
     queryProcessor = new QueryProcessor(),
     tokenManager = new TokenBudgetManager(),
     contextBuilder = new ContextBuilder(),

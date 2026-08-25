@@ -238,7 +238,28 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
 
                 // Parse normal line
                 const trimmed = line.trim();
-                if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+                const imageMatch = trimmed.match(/!\[(.*?)\]\((.*?)\)/);
+                if (imageMatch) {
+                    const alt = imageMatch[1];
+                    const url = imageMatch[2];
+                    renderedBlocks.push(
+                        <img 
+                            key={`img-${idx}`} 
+                            src={url} 
+                            alt={alt} 
+                            style={{ 
+                                maxWidth: '100%', 
+                                maxHeight: '400px', 
+                                borderRadius: '12px', 
+                                marginTop: '12px', 
+                                marginBottom: '12px', 
+                                display: 'block', 
+                                border: '1px solid #e2e8f0',
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)'
+                            }} 
+                        />
+                    );
+                } else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
                     const inner = trimmed.substring(2);
                     renderedBlocks.push(
                         <li key={`li-${idx}`} className={styles.listItem}>
@@ -407,7 +428,7 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
                             ref={fileInputRef}
                             style={{ display: "none" }}
                             onChange={handleFileChange}
-                            accept=".pdf,.docx,.xlsx,.xls,.csv,.json,.xml,.html,.htm,.md,.txt,.pptx,.zip"
+                            accept=".pdf,.docx,.xlsx,.xls,.csv,.json,.xml,.html,.htm,.md,.txt,.pptx,.zip,.png,.jpg,.jpeg"
                         />
                         <input
                             type="text"

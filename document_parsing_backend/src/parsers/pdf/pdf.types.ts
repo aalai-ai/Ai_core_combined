@@ -15,7 +15,15 @@ export interface ExtractedLine {
   pageNumber: number; // Source page number
 }
 
+export interface ExtractedImage {
+  fileName: string;
+  width: number;
+  height: number;
+  buffer: Buffer;
+}
+
 export interface ExtractedPage {
   pageNumber: number;
   lines: ExtractedLine[];
+  images?: ExtractedImage[];
 }

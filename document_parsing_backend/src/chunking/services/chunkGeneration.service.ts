@@ -8,6 +8,7 @@ import { TableChunkStrategy } from '../strategies/tableChunkStrategy';
 import { StructuredDataChunkStrategy } from '../strategies/structuredDataChunkStrategy';
 import { SpreadsheetChunkStrategy } from '../strategies/spreadsheetChunkStrategy';
 import { PresentationChunkStrategy } from '../strategies/presentationChunkStrategy';
+import { ImageChunkStrategy } from '../strategies/imageChunkStrategy';
 
 export interface ChunkSettings {
   maxChunkTokens?: number;
@@ -34,7 +35,7 @@ export class ChunkGenerationService {
       ['heading', new HeadingChunkStrategy()],
       ['paragraph', new ParagraphChunkStrategy()],
       ['list', new ParagraphChunkStrategy()],
-      ['image', new ParagraphChunkStrategy()], // Fallback image to visual text placeholder
+      ['image', new ImageChunkStrategy()],
       ['table', new TableChunkStrategy()],
       ['json', new StructuredDataChunkStrategy()],
       ['json-array', new StructuredDataChunkStrategy()],

@@ -5,6 +5,10 @@ import { ParsedDocument, DocumentSection, ContentBlock } from '../../types/parse
 import { PdfExtractor } from './pdfExtractor';
 import { readFileToBuffer } from '../../utils/fileReader';
 import { BadRequestError } from '../../utils/errors';
+import { MinioService } from '../../utils/minio';
+import { config } from '../../config/config';
+import fs from 'fs';
+import path from 'path';
 
 export class PdfParser implements DocumentParser {
   private extractor: PdfExtractor;
@@ -49,9 +53,54 @@ export class PdfParser implements DocumentParser {
       return section;
     };
 
-    // 4. Iterate over lines to group them into headings & body paragraphs
+    // 4. Iterate over pages and lines to group them into headings & body paragraphs
     for (const page of pages) {
       const pageNum = page.pageNumber;
+
+      // 4a. Process and upload any extracted images first
+      if (page.images && page.images.length > 0) {
+        for (const img of page.images) {
+          const storedFileName = `${context.documentId}_page_${pageNum}_${img.fileName}`;
+          
+          try {
+            if (config.storageProvider === 'minio') {
+              const minio = MinioService.getInstance();
+              const key = `original/${storedFileName}`;
+              await minio.uploadBuffer(key, img.buffer, 'image/png');
+            } else {
+              const originalUploadsDir = path.join(config.uploadsDir, 'original');
+              if (!fs.existsSync(originalUploadsDir)) {
+                fs.mkdirSync(originalUploadsDir, { recursive: true });
+              }
+              const localPath = path.join(originalUploadsDir, storedFileName);
+              await fs.promises.writeFile(localPath, img.buffer);
+            }
+
+            // If no section has been encountered yet, construct a default body section
+            if (!currentSection) {
+              currentSection = createNewSection('Document Body', 1);
+            }
+
+            const imgBlock: ContentBlock = {
+              type: 'image',
+              content: {
+                fileName: storedFileName,
+                width: img.width,
+                height: img.height,
+                ocrStatus: 'NOT_PROCESSED',
+              },
+              metadata: {
+                page: pageNum,
+              },
+            };
+
+            currentSection.content.push(imgBlock);
+          } catch (err: any) {
+            // Log warning but don't fail overall PDF parsing if one image fails
+            console.error(`Failed to save extracted PDF image ${storedFileName}:`, err);
+          }
+        }
+      }
 
       for (const line of page.lines) {
         const text = line.text;

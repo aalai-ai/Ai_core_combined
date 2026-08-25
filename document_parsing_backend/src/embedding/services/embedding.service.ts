@@ -1,5 +1,5 @@
 import { EmbeddingProvider } from '../providers/embeddingProvider.interface';
-import { OpenAIEmbeddingProvider } from '../providers/openaiEmbedding.provider';
+import { OllamaEmbeddingProvider } from '../providers/ollamaEmbedding.provider';
 import { config } from '../../config/config';
 import { logger } from '../../utils/logger';
 
@@ -18,9 +18,9 @@ export class EmbeddingService {
     if (provider) {
       this.provider = provider;
     } else {
-      const providerType = config.embeddingProvider || 'openai';
-      if (providerType === 'openai') {
-        this.provider = new OpenAIEmbeddingProvider();
+      const providerType = config.embeddingProvider || 'ollama';
+      if (providerType === 'ollama') {
+        this.provider = new OllamaEmbeddingProvider();
       } else {
         throw new Error(`Unsupported embedding provider: ${providerType}`);
       }

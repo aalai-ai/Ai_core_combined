@@ -178,6 +178,7 @@ export class RetrievalService {
       const result: RetrievalResult = {
         documentId: chunk.documentId,
         chunkId: chunk.chunkId,
+        contentType: chunk.contentType,
         content: chunk.content,
         score: candidate.score,
         title: chunk.title,

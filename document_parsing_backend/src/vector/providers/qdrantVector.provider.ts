@@ -247,20 +247,27 @@ export class QdrantVectorProvider implements VectorProvider {
     }
   }
 
-  public async getCollectionInfo(collectionName: string): Promise<{ pointsCount: number; status: string }> {
+  public async getCollectionInfo(collectionName: string): Promise<{ pointsCount: number; status: string; dimensions?: number }> {
     if (this.isMock) {
       const col = this.mockStore.get(collectionName);
       return {
         pointsCount: col ? col.size : 0,
         status: 'green',
+        dimensions: config.vectorDimensions || 768,
       };
     }
 
     try {
       const response = await this.client.getCollection(collectionName);
+      const vectors = response.config?.params?.vectors;
+      let dimensions: number | undefined;
+      if (vectors && typeof vectors === 'object' && 'size' in vectors) {
+        dimensions = (vectors as any).size;
+      }
       return {
         pointsCount: response.points_count || 0,
         status: response.status || 'unknown',
+        dimensions,
       };
     } catch (error: any) {
       logger.error(`[Qdrant Provider] Failed to get collection info: ${error.message || error}`);

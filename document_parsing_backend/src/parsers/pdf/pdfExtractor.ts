@@ -1,7 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
-import { PDFTextItem, ExtractedPage, ExtractedLine } from './pdf.types';
+import { PDFTextItem, ExtractedPage, ExtractedLine, ExtractedImage } from './pdf.types';
 import { logger } from '../../utils/logger';
 import { BadRequestError } from '../../utils/errors';
+import sharp from 'sharp';
 
 export class PdfExtractor {
   constructor() {
@@ -111,9 +112,66 @@ export class PdfExtractor {
           }
         }
 
+        // Extract embedded images from the page operator list
+        const pageImages: ExtractedImage[] = [];
+        try {
+          const opList = await page.getOperatorList();
+          let imageCount = 0;
+          for (let i = 0; i < opList.fnArray.length; i++) {
+            const fn = opList.fnArray[i];
+            
+            // 85: paintImageXObject, 82: paintInlineImageXObject
+            if (fn === 85 || fn === 82) {
+              const imgRef = opList.argsArray[i][0];
+              let img: any;
+              try {
+                img = page.objs.get(imgRef);
+              } catch (e: any) {}
+
+              if (!img) {
+                try {
+                  img = page.commonObjs.get(imgRef);
+                } catch (e: any) {}
+              }
+
+              if (img && img.data && img.width >= 50 && img.height >= 50) {
+                const pixelCount = img.width * img.height;
+                const channels = img.data.length / pixelCount;
+                
+                if (channels === 3 || channels === 4) {
+                  imageCount++;
+                  try {
+                    const imageBuffer = await sharp(Buffer.from(img.data), {
+                      raw: {
+                        width: img.width,
+                        height: img.height,
+                        channels: channels as any
+                      }
+                    })
+                    .png()
+                    .toBuffer();
+                    
+                    pageImages.push({
+                      fileName: `page_${pageNum}_img_${imageCount}.png`,
+                      width: img.width,
+                      height: img.height,
+                      buffer: imageBuffer
+                    });
+                  } catch (err) {
+                    logger.warn(`Failed to convert extracted PDF image to PNG: ${err}`);
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          logger.warn(`Failed to extract images from page ${pageNum}: ${err}`);
+        }
+
         pages.push({
           pageNumber: pageNum,
           lines: pageLines,
+          images: pageImages.length > 0 ? pageImages : undefined,
         });
       }
 

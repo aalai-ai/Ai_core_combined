@@ -33,12 +33,13 @@ const QueueConfigSchema = z.object({
 const AIConfigSchema = z.object({
   openaiApiKey: z.string().optional(),
   ollamaBaseUrl: z.string().default('http://192.168.2.210:11434'),
-  embeddingProvider: z.string().default('openai'),
-  embeddingModel: z.string().default('text-embedding-3-small'),
+  embeddingProvider: z.string().default('ollama'),
+  embeddingModel: z.string().default('nomic-embed-text:latest'),
   embeddingBatchSize: z.coerce.number().default(100),
   embeddingMaxRetries: z.coerce.number().default(3),
   embeddingRequestTimeout: z.coerce.number().default(30000),
-  
+  visionModel: z.string().default('llama3.2-vision'),
+
   // Retrieval Configuration
   retrievalDefaultTopK: z.coerce.number().default(5),
   retrievalMinimumScore: z.coerce.number().default(0.7),
@@ -48,15 +49,15 @@ const AIConfigSchema = z.object({
   enableRetrievalCache: z.preprocess((val) => val !== 'false', z.boolean().default(true)),
 
   // RAG Configuration
-  ragLlmProvider: z.string().default('openai'),
-  ragLlmModel: z.string().default('gpt-4o-mini'),
+  ragLlmProvider: z.string().default('ollama'),
+  ragLlmModel: z.string().default('qwen3.5:9b'),
   ragLlmTemperature: z.coerce.number().default(0.2),
   ragLlmMaxTokens: z.coerce.number().default(1000),
   ragLlmSystemPrompt: z.string().default("You are an expert system assistant. Answer the user's question accurately using only the provided context. Cite sources appropriately."),
   enableRagCache: z.preprocess((val) => val !== 'false', z.boolean().default(true)),
 
   // Agent Configuration
-  agentDefaultModel: z.string().default('gpt-4o-mini'),
+  agentDefaultModel: z.string().default('qwen3.5:9b'),
   agentSystemPrompt: z.string().default("You are a helpful AI Agent that orchestrates backend tasks."),
   agentMaxIterations: z.coerce.number().default(5),
   enableAgentMemory: z.preprocess((val) => val !== 'false', z.boolean().default(true)),
@@ -141,6 +142,7 @@ export interface Config {
   embeddingRequestTimeout: number;
   openaiApiKey?: string;
   ollamaBaseUrl: string;
+  visionModel: string;
   storageProvider: 'local' | 'minio';
   minioEndpoint: string;
   minioAccessKey: string;
@@ -205,6 +207,7 @@ try {
       embeddingBatchSize: process.env.EMBEDDING_BATCH_SIZE,
       embeddingMaxRetries: process.env.EMBEDDING_MAX_RETRIES,
       embeddingRequestTimeout: process.env.EMBEDDING_REQUEST_TIMEOUT,
+      visionModel: process.env.VISION_MODEL,
       retrievalDefaultTopK: process.env.RETRIEVAL_DEFAULT_TOP_K,
       retrievalMinimumScore: process.env.RETRIEVAL_MINIMUM_SCORE,
       retrievalMaxReturnedChunks: process.env.RETRIEVAL_MAX_RETURNED_CHUNKS,
@@ -264,10 +267,7 @@ try {
   process.exit(1);
 }
 
-// Alert if API key is missing
-if (!rawConfig.ai.openaiApiKey && rawConfig.app.env === 'production') {
-  console.warn('⚠️ WARNING: OPENAI_API_KEY is not defined in production environment.');
-}
+
 
 // Export parsed subconfigs
 export const appConfig = rawConfig.app;
@@ -310,6 +310,7 @@ export const config: Config = Object.freeze({
   embeddingRequestTimeout: rawConfig.ai.embeddingRequestTimeout,
   openaiApiKey: rawConfig.ai.openaiApiKey,
   ollamaBaseUrl: rawConfig.ai.ollamaBaseUrl,
+  visionModel: rawConfig.ai.visionModel,
   qdrantHost: rawConfig.vector.qdrantHost,
   qdrantApiKey: rawConfig.vector.qdrantApiKey,
   collectionName: rawConfig.vector.collectionName,
