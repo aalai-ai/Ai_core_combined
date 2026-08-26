@@ -57,6 +57,11 @@ function getToolSchema(name: string) {
       return z.object({
         query: z.string().describe("The user search prompt query containing keywords or model numbers to look up in the uploaded manuals."),
       });
+    case "generate_3d_prompt":
+      return z.object({
+        query: z.string().describe("Search query or device name for generating 3D model prompts and Blender scripts."),
+        documentId: z.string().optional().describe("Optional specific document ID."),
+      });
     default:
       return z.object({});
   }

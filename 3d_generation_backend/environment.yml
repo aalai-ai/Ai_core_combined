@@ -1,0 +1,19 @@
+name: plixy-3d-engine
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch
+  - torchvision
+  - pytorch-cuda=11.8
+  - pip
+  - pip:
+    - fastapi
+    - uvicorn
+    - trimesh
+    - rembg
+    - einops
+    - omegaconf

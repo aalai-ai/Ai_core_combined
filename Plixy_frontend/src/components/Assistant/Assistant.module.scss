@@ -10,6 +10,48 @@
     overflow: hidden;
     transition: all 0.3s ease;
 
+    .modeHeaderBar {
+        position: absolute;
+        top: 16px;
+        right: 24px;
+        z-index: 120;
+        display: flex;
+        align-items: center;
+
+        .modeToggleContainer {
+            display: flex;
+            background: rgba(244, 244, 245, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid #e4e4e7;
+            border-radius: 10px;
+            padding: 3px;
+            gap: 2px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+
+            .modeBtn {
+                background: transparent;
+                border: none;
+                padding: 6px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                color: #71717a;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+
+                &:hover {
+                    color: #18181b;
+                }
+
+                &.modeBtnActive {
+                    background-color: #6366f1;
+                    color: #ffffff;
+                    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+                }
+            }
+        }
+    }
+
     .projectSelectorWrap {
         position: absolute;
         top: 24px;
@@ -246,6 +288,60 @@
                         vertical-align: middle;
                         animation: blink 0.8s infinite step-end;
                         border-radius: 2px;
+                    }
+
+                    // Image Preview Card & Download Button
+                    .imagePreviewCard {
+                        display: flex;
+                        flex-direction: column;
+                        margin: 14px 0;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        background: rgba(0, 0, 0, 0.2);
+
+                        .chatImagePreview {
+                            max-width: 100%;
+                            max-height: 420px;
+                            object-fit: contain;
+                            display: block;
+                        }
+
+                        .imageCardFooter {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding: 8px 12px;
+                            background: rgba(0, 0, 0, 0.3);
+
+                            .imageAltText {
+                                font-size: 12px;
+                                color: #a1a1aa;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                                max-width: 70%;
+                            }
+
+                            .imageDownloadBtn {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                                padding: 5px 12px;
+                                font-size: 12px;
+                                font-weight: 600;
+                                background-color: #6366f1;
+                                color: #ffffff;
+                                border-radius: 6px;
+                                text-decoration: none;
+                                transition: all 0.2s ease;
+
+                                &:hover {
+                                    background-color: #4f46e5;
+                                    transform: translateY(-1px);
+                                }
+                            }
+                        }
                     }
 
                     // Markdown Rendering Elements Styling
@@ -637,6 +733,71 @@
 
                 &:focus-within {
                     border-color: #6366f1;
+                }
+
+                .attachedFilesBar {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    padding: 10px 14px 4px 14px;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+                    .attachedFilePill {
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        background: rgba(99, 102, 241, 0.15);
+                        border: 1px solid rgba(99, 102, 241, 0.3);
+                        border-radius: 8px;
+                        padding: 4px 10px;
+                        font-size: 12px;
+                        color: #e4e4e7;
+                        max-width: 260px;
+
+                        .pillThumbnail {
+                            width: 22px;
+                            height: 22px;
+                            object-fit: cover;
+                            border-radius: 4px;
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                        }
+
+                        .fileIcon {
+                            font-size: 13px;
+                        }
+
+                        .fileName {
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                            font-weight: 500;
+                        }
+
+                        .fileSize {
+                            color: #a1a1aa;
+                            font-size: 11px;
+                        }
+
+                        .removeFileBtn {
+                            background: none;
+                            border: none;
+                            color: #a1a1aa;
+                            cursor: pointer;
+                            font-size: 12px;
+                            line-height: 1;
+                            padding: 2px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.2s;
+
+                            &:hover {
+                                color: #ef4444;
+                                background: rgba(239, 68, 68, 0.15);
+                            }
+                        }
+                    }
                 }
 
                 .input-wrapper {

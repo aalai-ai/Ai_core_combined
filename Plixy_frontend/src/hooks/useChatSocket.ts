@@ -109,12 +109,12 @@ export const useChatSocket = (chatId: string | null, userId?: string, onChatUpda
     };
   }, [chatId, onChatUpdated]);
 
-  const sendMessage = (message: string) => {
+  const sendMessage = (message: string, applicationId?: string) => {
     if (socketRef.current && chatId) {
       setMessages((prev) => [...prev, { role: 'user', content: message }]);
       setIsLoading(true);
       setEstimatedTimeMs(null);
-      socketRef.current.emit('message', { chatId, message, userId });
+      socketRef.current.emit('message', { chatId, message, userId, applicationId });
     }
   };
 

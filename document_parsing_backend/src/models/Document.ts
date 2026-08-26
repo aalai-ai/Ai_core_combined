@@ -47,6 +47,9 @@ export interface IDocument {
   processingTime?: number;
   processingVersion?: number;
 
+  // Micro 3D Specifications Field
+  micro3DSpecs?: Record<string, any>;
+
   // Soft Delete Fields
   isDeleted?: boolean;
   deletedAt?: Date;
@@ -99,6 +102,10 @@ const DocumentSchema = new Schema<IDocument>(
       default: DocumentStatus.UPLOADED,
     },
     metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+    micro3DSpecs: {
       type: Schema.Types.Mixed,
       default: {},
     },

@@ -15,9 +15,9 @@ export function initSocket(server: any) {
       socket.emit("history", chat?.messages || []);
     });
 
-    socket.on("message", async ({ chatId, message, userId }) => {
+    socket.on("message", async ({ chatId, message, userId, applicationId }) => {
       try {
-        console.log(`💬 Socket message received: "${message}" for chatId: ${chatId}`);
+        console.log(`💬 Socket message received: "${message}" [App: ${applicationId || 'plixy'}] for chatId: ${chatId}`);
         let chat = await Chat.findOne({ chatId });
 
         if (!chat) {
@@ -57,7 +57,8 @@ export function initSocket(server: any) {
               type: "tool",
               content: tool,
             });
-          }
+          },
+          applicationId
         );
         console.log(`🤖 streamAgent execution finished successfully.`);
 

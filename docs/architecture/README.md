@@ -13,6 +13,7 @@ Welcome to the centralized architecture documentation repository for the **AI In
 | **LangGraph Backend** | [02_LANGGRAPH_BACKEND_ARCHITECTURE.md](file:///c:/Users/Gabriel/Documents/Ai_core_combined/docs/architecture/02_LANGGRAPH_BACKEND_ARCHITECTURE.md) | LangGraph `StateGraph` agentic execution loop diagram, Express/Socket.io server, Stdio MCP client wrapper, and LLM integrations. |
 | **MCP Server** | [03_MCP_SERVER_ARCHITECTURE.md](file:///c:/Users/Gabriel/Documents/Ai_core_combined/docs/architecture/03_MCP_SERVER_ARCHITECTURE.md) | Model Context Protocol (MCP) server design diagram, tool definitions (`get_live_data`, `get_analysis_data`, `get_grounding_context`), background Modbus PLC poller, and InfluxDB integration. |
 | **Document Parsing Backend** | [04_DOCUMENT_PARSING_BACKEND_ARCHITECTURE.md](file:///c:/Users/Gabriel/Documents/Ai_core_combined/docs/architecture/04_DOCUMENT_PARSING_BACKEND_ARCHITECTURE.md) | Async document ingestion pipeline diagram, BullMQ/Redis task queue, multi-format parsers (PDF, Word, Excel, CSV, Image OCR), Qdrant vector store indexing, and MinIO S3 object storage integration. |
+| **Multi-Frontend Core AI Engine** | [05_MULTI_FRONTEND_CORE_AI_ENGINE_ARCHITECTURE.md](file:///c:/Users/Gabriel/Documents/Ai_core_combined/docs/architecture/05_MULTI_FRONTEND_CORE_AI_ENGINE_ARCHITECTURE.md) | Decoupled Headless Core AI Engine architecture serving Plixy (IIoT Document RAG) and Future 3D CAD Studio App over unified REST & WebSocket APIs. |
 
 ---
 

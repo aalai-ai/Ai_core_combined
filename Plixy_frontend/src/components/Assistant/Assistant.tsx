@@ -76,6 +76,8 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
         scrollToBottom("smooth")
     }, [messages, isLoading])
 
+    const [appMode, setAppMode] = useState<'plixy' | '3d_prompt_generator'>('plixy');
+
     const handleSendMessage = async () => {
         if (!inputValue.trim() || isStreaming) return;
 
@@ -92,17 +94,17 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
                 setPendingMessage(null);
             }
         } else {
-            sendMessage(inputValue);
+            sendMessage(inputValue, appMode);
             setInputValue("");
         }
     }
 
     useEffect(() => {
         if (activeChatId && pendingMessage && isHistoryLoaded && !isStreaming) {
-            sendMessage(pendingMessage);
+            sendMessage(pendingMessage, appMode);
             setPendingMessage(null);
         }
-    }, [activeChatId, pendingMessage, isHistoryLoaded, isStreaming, sendMessage]);
+    }, [activeChatId, pendingMessage, isHistoryLoaded, isStreaming, sendMessage, appMode]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" && !isStreaming) {
@@ -111,16 +113,17 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
     }
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
         setIsFileUploading(true);
         try {
-            console.log("Uploading file:", file.name);
-            const data = await uploadFile(file);
-            console.log("File ingested successfully:", data);
+            console.log(`Uploading ${files.length} file(s) in batch...`);
+            const uploadResults = await Promise.all(files.map(f => uploadFile(f)));
+            console.log("Files ingested successfully:", uploadResults);
             
-            const notice = `I have successfully uploaded and parsed your document: "${file.name}" (${data.chunks_count} chunks). You can now ask questions about its content!`;
+            const fileDetails = files.map((f, i) => `"${f.name}" (${uploadResults[i]?.chunks_count || 0} chunks)`).join(", ");
+            const notice = `I have successfully uploaded and parsed your document(s): ${fileDetails}. You can now ask questions about their content or generate a 3D model prompt!`;
             
             if (activeChatId) {
                 sendMessage(notice);
@@ -133,7 +136,7 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
             }
         } catch (error: any) {
             console.error("Failed to upload manual:", error);
-            alert("Failed to upload manual: " + (error.response?.data?.error || error.message));
+            alert("Failed to upload file(s): " + (error.response?.data?.error || error.message));
         } finally {
             setIsFileUploading(false);
             if (fileInputRef.current) {
@@ -240,24 +243,29 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
                 const trimmed = line.trim();
                 const imageMatch = trimmed.match(/!\[(.*?)\]\((.*?)\)/);
                 if (imageMatch) {
-                    const alt = imageMatch[1];
+                    const alt = imageMatch[1] || "Uploaded image preview";
                     const url = imageMatch[2];
                     renderedBlocks.push(
-                        <img 
-                            key={`img-${idx}`} 
-                            src={url} 
-                            alt={alt} 
-                            style={{ 
-                                maxWidth: '100%', 
-                                maxHeight: '400px', 
-                                borderRadius: '12px', 
-                                marginTop: '12px', 
-                                marginBottom: '12px', 
-                                display: 'block', 
-                                border: '1px solid #e2e8f0',
-                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)'
-                            }} 
-                        />
+                        <div key={`img-card-${idx}`} className={styles.imagePreviewCard}>
+                            <img 
+                                src={url} 
+                                alt={alt} 
+                                className={styles.chatImagePreview}
+                            />
+                            <div className={styles.imageCardFooter}>
+                                <span className={styles.imageAltText}>{alt}</span>
+                                <a 
+                                    href={url} 
+                                    download={alt.replace(/[^a-zA-Z0-9._-]/g, '_') || "image.png"}
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className={styles.imageDownloadBtn}
+                                    title="Download image file"
+                                >
+                                    📥 Download
+                                </a>
+                            </div>
+                        </div>
                     );
                 } else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
                     const inner = trimmed.substring(2);
@@ -315,6 +323,26 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
 
     return (
         <div className={styles["assistant-container"]}> 
+            {/* Application Mode Toggle Bar */}
+            <div className={styles.modeHeaderBar}>
+                <div className={styles.modeToggleContainer}>
+                    <button
+                        className={`${styles.modeBtn} ${appMode === 'plixy' ? styles.modeBtnActive : ''}`}
+                        onClick={() => setAppMode('plixy')}
+                        title="Switch reasoning to IIoT Document RAG Mode"
+                    >
+                        📘 Document RAG Mode
+                    </button>
+                    <button
+                        className={`${styles.modeBtn} ${appMode === '3d_prompt_generator' ? styles.modeBtnActive : ''}`}
+                        onClick={() => setAppMode('3d_prompt_generator')}
+                        title="Switch reasoning to 3D Model Prompt Generator Mode"
+                    >
+                        📐 3D Prompt Generator Mode
+                    </button>
+                </div>
+            </div>
+
             <div className={styles["messages-view"]}>
                 {!activeChatId || messages.length === 0 ? (
                     <div className={styles.introBox}>
@@ -419,7 +447,7 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
                         <div 
                             className={`${styles.uploadBtn} ${isFileUploading ? styles.loading : ""}`}
                             onClick={() => !isFileUploading && fileInputRef.current?.click()}
-                            title="Upload document manual (PDF, Excel, Word, Zip, text, images)"
+                            title="Upload documents, schematics, manuals, or images (Select single or multiple files)"
                         >
                             {isFileUploading ? <span className={styles.spinner}></span> : <PlusIcon />}
                         </div>
@@ -428,7 +456,8 @@ const Assistant = ({ activeChatId, userId, setChats, setActiveChatId }: Assistan
                             ref={fileInputRef}
                             style={{ display: "none" }}
                             onChange={handleFileChange}
-                            accept=".pdf,.docx,.xlsx,.xls,.csv,.json,.xml,.html,.htm,.md,.txt,.pptx,.zip,.png,.jpg,.jpeg"
+                            multiple
+                            accept=".pdf,.docx,.xlsx,.xls,.csv,.json,.xml,.html,.htm,.md,.txt,.pptx,.zip,.png,.jpg,.jpeg,.dxf,.dwg,.step,.stp,.stl"
                         />
                         <input
                             type="text"

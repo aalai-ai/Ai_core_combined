@@ -611,4 +611,36 @@ export class DocumentController {
       next(error);
     }
   };
+
+  /**
+   * GET /documents/:id/dimensions
+   * Retrieves extracted 3D micro-specifications for a document.
+   */
+  public getDimensions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const docId = (req.params.id || '') as string;
+      const doc = await this.documentRepository.findByDocumentId(docId);
+      if (!doc) {
+        throw new NotFoundError(`Document with ID ${docId} not found.`);
+      }
+
+      if (!doc.micro3DSpecs || Object.keys(doc.micro3DSpecs).length === 0) {
+        const extractor = new (require('../services/microDetailExtractor.service').MicroDetailExtractorService)();
+        const text = doc.parsedContent ? JSON.stringify(doc.parsedContent) : doc.originalName;
+        doc.micro3DSpecs = await extractor.extract3DSpecs(text, [doc.filePath]);
+        await this.documentRepository.update({ documentId: docId }, { micro3DSpecs: doc.micro3DSpecs });
+      }
+
+      res.status(200).json({
+        documentId: docId,
+        dimensions: doc.micro3DSpecs,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

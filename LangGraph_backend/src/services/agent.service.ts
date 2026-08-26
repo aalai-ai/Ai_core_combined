@@ -12,7 +12,8 @@ export async function streamAgent(
   input: string,
   history: any[],
   onToken: (token: string) => void,
-  onTool: (tool: any) => void
+  onTool: (tool: any) => void,
+  applicationId?: string
 ) {
   // Map flat log records into LangChain Message schemas
   const messages = history.map((msg: any) => {
@@ -27,10 +28,9 @@ export async function streamAgent(
   messages.push(new HumanMessage(input));
 
   // Execute Graph using streamMode "messages" to get incremental token outputs
-  console.log("[streamAgent] input messages length:", messages.length);
-  // Execute Graph using streamMode "messages" to get incremental token outputs
+  console.log(`[streamAgent] input messages length: ${messages.length}, applicationId: ${applicationId || 'plixy'}`);
   const stream = await executor.stream(
-    { messages },
+    { messages, applicationId: applicationId || 'plixy' },
     { streamMode: "messages" }
   );
   console.log("[streamAgent] stream created successfully");

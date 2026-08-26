@@ -11,6 +11,11 @@ export enum DocumentType {
   PPTX = 'PPTX',
   PNG = 'PNG',
   JPEG = 'JPEG',
+  DXF = 'DXF',
+  DWG = 'DWG',
+  STEP = 'STEP',
+  STP = 'STP',
+  STL = 'STL',
 }
 
 /**
@@ -49,6 +54,16 @@ export function getDocumentTypeFromExtension(ext: string): DocumentType {
     case 'JPG':
     case 'JPEG':
       return DocumentType.JPEG;
+    case 'DXF':
+      return DocumentType.DXF;
+    case 'DWG':
+      return DocumentType.DWG;
+    case 'STEP':
+      return DocumentType.STEP;
+    case 'STP':
+      return DocumentType.STP;
+    case 'STL':
+      return DocumentType.STL;
     default:
       throw new Error(`Unsupported document extension: ${ext}`);
   }

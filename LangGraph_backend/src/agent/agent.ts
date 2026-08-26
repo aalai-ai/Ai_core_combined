@@ -23,7 +23,7 @@ export async function createAgent(tools: any[]) {
   });
 
   // Categorize tools for specialized workers
-  const documentToolNames = ["get_grounding_context"];
+  const documentToolNames = ["get_grounding_context", "generate_3d_prompt"];
   const documentTools = tools.filter((t) => documentToolNames.includes(t.name));
   const plcTools = tools.filter((t) => !documentToolNames.includes(t.name));
 
@@ -47,19 +47,28 @@ export async function createAgent(tools: any[]) {
   }
 
   // 2. Node: Document RAG Specialist Agent (Outputs clean Markdown directly!)
-  async function documentAgentNode(state: typeof MessagesAnnotation.State) {
-    const docPrompt = ChatPromptTemplate.fromMessages([
-      [
-        "system",
-        `You are an IIoT Document RAG Assistant.
+  async function documentAgentNode(state: any) {
+    const is3DPromptApp = state.applicationId === '3d_prompt_generator';
+
+    const systemPromptText = is3DPromptApp
+      ? `You are an Industrial 3D Model & CAD Specification Specialist (Application: 3D Prompt Generator).
 
         Rules:
-        - Always use the 'get_grounding_context' tool first to retrieve contents from uploaded manuals/files (PDF, Excel, Word, CSV, etc.) when answering document queries.
-        - Multi-Intent Queries: If the user asks a compound question (e.g. asking for the device model name AND the Modbus address map/registers), output multiple separate 'get_grounding_context' tool calls in parallel to retrieve complete context.
-        - Iterative Search: If your retrieved context chunks are incomplete or reference specific sections/appendices that were not returned, call the tool again with a targeted search query for those referenced chapters.
-        - Output Formatting: Synthesize your retrieved information into a clean, executive-ready response. Use Markdown grid tables for any parameter/register lists, clear section headers (e.g. ### Modbus Address Map), and callouts (> ⚠️ **CAUTION**) for warnings. Do not output raw JSON or system debug logs.
-        - Images & Layouts: If a retrieved chunk has contentType: 'IMAGE' or contains image metadata (e.g. metadata.fileName) and the user is asking to retrieve, view, or display an image/diagram (like the rear panel, wiring diagram, etc.), render it inline using standard markdown image syntax pointing to the server: \`![Device Diagram](http://localhost:5100/uploads/<fileName>)\`, where <fileName> is the filename/path of the image from the chunk's metadata (e.g., \`metadata.fileName\`). Do NOT state that you cannot display images if this image filename metadata is available in your context.`,
-      ],
+        - Primary Objective: Your main goal is to extract micro-3D CAD parameters ($W x H x D$ mm, chamfer radii, panel cutouts, DIN-rail channels, screen optics, pin counts, silkscreen labels) and generate an ultra-detailed Master 3D Model Prompt, Technical Specs Table, and executable Blender Python (bpy) script.
+        - Tool Usage: Call the 'generate_3d_prompt' tool directly whenever the user requests 3D prompts, device model parameters, or Blender scripts.
+        - Multi-File Fusion: Fuses text, CAD vector layers (.dxf/.step), and images across all session documents in a single pass.
+        - Output Formatting: Always render the Markdown Technical Specifications Table, Master Claude / Blender MCP Prompt block, and complete production Blender Python (bpy) script.`
+      : `You are an IIoT Document RAG Assistant (Application: Plixy).
+
+        Rules:
+        - Primary Objective: Solve user queries from uploaded manuals, schematics, and files (PDF, Excel, Word, CSV, etc.) using semantic vector retrieval.
+        - Always use the 'get_grounding_context' tool first to retrieve contents from uploaded manuals/files when answering document queries.
+        - Multi-Intent Queries: Output multiple separate tool calls in parallel to retrieve complete context for compound questions.
+        - Output Formatting: Synthesize retrieved information into clean Markdown grid tables for parameter/register lists, clear section headers, and callouts (> ⚠️ **CAUTION**).
+        - Images & Layouts: Render retrieved image diagrams inline using standard markdown syntax \`![Device Diagram](http://localhost:5100/uploads/<fileName>)\`.`;
+
+    const docPrompt = ChatPromptTemplate.fromMessages([
+      ["system", systemPromptText],
       new MessagesPlaceholder("messages"),
     ]);
 

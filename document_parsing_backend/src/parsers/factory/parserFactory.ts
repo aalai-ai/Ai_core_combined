@@ -13,6 +13,7 @@ import { CsvParser } from '../csv/csvParser';
 import { XlsxParser } from '../xlsx/xlsxParser';
 import { PptxParser } from '../pptx/pptxParser';
 import { ImageParser } from '../image/imageParser';
+import { CadParser } from '../cad/cadParser';
 
 // Bootstrap registration of parsers for all supported document types
 for (const type of Object.values(DocumentType)) {
@@ -50,6 +51,13 @@ for (const type of Object.values(DocumentType)) {
     case DocumentType.PNG:
     case DocumentType.JPEG:
       ParserRegistry.register(type, new ImageParser());
+      break;
+    case DocumentType.DXF:
+    case DocumentType.DWG:
+    case DocumentType.STEP:
+    case DocumentType.STP:
+    case DocumentType.STL:
+      ParserRegistry.register(type, new CadParser());
       break;
     default:
       ParserRegistry.register(type, new PlaceholderParser(type));

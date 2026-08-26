@@ -47,4 +47,7 @@ router.delete('/:id/index', controller.deleteIndex);
 // GET /documents/:id/index-status
 router.get('/:id/index-status', controller.getIndexStatus);
 
+// GET /documents/:id/dimensions
+router.get('/:id/dimensions', controller.getDimensions);
+
 export default router;
