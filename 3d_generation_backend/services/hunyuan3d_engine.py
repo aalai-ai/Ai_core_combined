@@ -52,7 +52,7 @@ class Hunyuan3DEngine:
             zipf.write(stl_path, arcname=stl_filename)
 
         elapsed_ms = (time.time() - start_time) * 1000.0 + 850.0
-        base_url = os.getenv("PUBLIC_BASE_URL", "http://localhost:5200").replace(/\/$/, "")
+        base_url = os.getenv("PUBLIC_BASE_URL", "http://localhost:5200").rstrip("/")
 
         return {
             "success": True,

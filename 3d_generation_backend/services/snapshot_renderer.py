@@ -8,7 +8,7 @@ class SnapshotRenderer:
     def __init__(self):
         self.snapshot_dir = os.getenv("SNAPSHOT_DIR", "./static/snapshots")
         os.makedirs(self.snapshot_dir, exist_ok=True)
-        self.base_url = os.getenv("PUBLIC_BASE_URL", "http://localhost:5200").replace(/\/$/, "")
+        self.base_url = os.getenv("PUBLIC_BASE_URL", "http://localhost:5200").rstrip("/")
 
     def render_snapshots(self, mesh_id: str) -> Dict[str, str]:
         """
