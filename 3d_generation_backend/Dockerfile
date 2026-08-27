@@ -2,8 +2,8 @@ FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Remove expired CUDA repo keys inside base image before apt-get update
-RUN rm -f /etc/apt/sources.list.d/cuda.list /etc/apt/sources.list.d/nvidia-ml.list
+# Purge all stale/expired CUDA repository list files inside base image before apt-get update
+RUN rm -rf /etc/apt/sources.list.d/*
 
 # Install System Dependencies & Python 3.10
 RUN apt-get update && apt-get install -y --no-install-recommends \
