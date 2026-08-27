@@ -1,24 +1,15 @@
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+FROM python:3.10-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Purge all stale/expired CUDA repository list files inside base image before apt-get update
-RUN rm -rf /etc/apt/sources.list.d/*
-
-# Install System Dependencies & Python 3.10
+# Install System Dependencies for OpenGL & Rendering
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.10 \
-    python3-pip \
-    python3.10-dev \
     git \
     wget \
     ffmpeg \
     libgl1-mesa-glx \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
-
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 \
-    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 WORKDIR /app
 
