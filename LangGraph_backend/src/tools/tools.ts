@@ -62,6 +62,15 @@ function getToolSchema(name: string) {
         query: z.string().describe("Search query or device name for generating 3D model prompts and Blender scripts."),
         documentId: z.string().optional().describe("Optional specific document ID."),
       });
+    case "generate_3d_mesh":
+      return z.object({
+        prompt: z.string().describe("3D model description or prompt."),
+        engine: z.string().optional().describe("3D Engine: hunyuan3d, trellis, or instantmesh."),
+      });
+    case "evaluate_mesh_accuracy":
+      return z.object({
+        meshId: z.string().describe("Generated 3D mesh identifier."),
+      });
     default:
       return z.object({});
   }

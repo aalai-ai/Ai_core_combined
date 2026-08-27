@@ -23,7 +23,7 @@ export async function createAgent(tools: any[]) {
   });
 
   // Categorize tools for specialized workers
-  const documentToolNames = ["get_grounding_context", "generate_3d_prompt"];
+  const documentToolNames = ["get_grounding_context", "generate_3d_prompt", "generate_3d_mesh", "evaluate_mesh_accuracy"];
   const documentTools = tools.filter((t) => documentToolNames.includes(t.name));
   const plcTools = tools.filter((t) => !documentToolNames.includes(t.name));
 

@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  3d_generation_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: plixy_3d_generation_backend
+    restart: always
+    ports:
+      - "5200:5200"
+    env_file:
+      - .env
+    volumes:
+      - ./checkpoints:/app/checkpoints
+      - ./static/assets:/app/static/assets
+      - ./static/snapshots:/app/static/snapshots
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

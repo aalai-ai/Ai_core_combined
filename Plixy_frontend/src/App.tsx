@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Assistant from "./components/Assistant/Assistant";
+import CADStudio from "./pages/CADStudio";
 import Navbar from "./components/Navbar/Navbar";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Auth from "./components/Auth/Auth";
@@ -61,6 +62,8 @@ const App = () => {
     setTheme(prev => prev === "light" ? "dark" : "light");
   };
 
+  const [viewMode, setViewMode] = useState<'chat' | 'cad_studio'>('chat');
+
   if (!user || !token) {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
@@ -76,15 +79,21 @@ const App = () => {
         setActiveChatId={setActiveChatId}
         user={user}
         onLogout={handleLogout}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
       />
       <div className={"content"}>
         <Navbar theme={theme} toggleTheme={toggleTheme} />
-        <Assistant 
-          activeChatId={activeChatId} 
-          userId={user._id}
-          setChats={setChats}
-          setActiveChatId={setActiveChatId}
-        />
+        {viewMode === 'cad_studio' ? (
+          <CADStudio />
+        ) : (
+          <Assistant 
+            activeChatId={activeChatId} 
+            userId={user._id}
+            setChats={setChats}
+            setActiveChatId={setActiveChatId}
+          />
+        )}
       </div>
     </div>
   );

@@ -166,6 +166,35 @@ Parameters:
           required: ["query"],
           additionalProperties: false
         }
+      },
+      {
+        name: "generate_3d_mesh",
+        description: `
+Generates a production 3D Mesh Model (.GLB, .OBJ, .STL) using the PyTorch CUDA 3D Engine (Hunyuan3D 2.x, TRELLIS.2, InstantMesh) and exports a multi-format ZIP bundle.
+`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            prompt: { type: "string", description: "3D Mesh prompt or device query" },
+            engine: { type: "string", description: "Selected 3D Engine: hunyuan3d, trellis, or instantmesh" }
+          },
+          required: ["prompt"],
+          additionalProperties: false
+        }
+      },
+      {
+        name: "evaluate_mesh_accuracy",
+        description: `
+Evaluates generated 3D Mesh synthetic snapshots against ground-truth source photos using Vision LLM, returning a Fidelity Score (0-100%) and audit report.
+`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            meshId: { type: "string", description: "Generated 3D mesh identifier" }
+          },
+          required: ["meshId"],
+          additionalProperties: false
+        }
       }
     ],
   };
@@ -372,6 +401,44 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }),
           },
         ],
+      };
+    }
+  }
+
+  if (request.params.name === "generate_3d_mesh") {
+    const { prompt, engine } = request.params.arguments as { prompt: string; engine?: string };
+    try {
+      const meshGeneratorUrl = (process.env.MESH_GENERATOR_URL || "http://localhost:5200").replace(/\/$/, "");
+      const res = await fetch(`${meshGeneratorUrl}/generate-mesh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, engine: engine || process.env.DEFAULT_3D_MODEL_ENGINE || "hunyuan3d" }),
+      });
+      const data = await res.json();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data) }],
+      };
+    } catch (err: any) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: false, error: err.message }) }],
+      };
+    }
+  }
+
+  if (request.params.name === "evaluate_mesh_accuracy") {
+    const { meshId } = request.params.arguments as { meshId: string };
+    try {
+      const evaluator = new (require("./services/meshAccuracyEvaluator.service").MeshAccuracyEvaluatorService)();
+      const report = await evaluator.evaluateMeshFidelity({
+        front: `http://localhost:5200/snapshots/${meshId}_front_0deg.jpg`,
+        rear: `http://localhost:5200/snapshots/${meshId}_rear_180deg.jpg`,
+      }, [], 1);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, report }) }],
+      };
+    } catch (err: any) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: false, error: err.message }) }],
       };
     }
   }

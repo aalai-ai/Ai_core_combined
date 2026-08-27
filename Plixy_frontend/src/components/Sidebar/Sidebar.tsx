@@ -11,11 +11,14 @@ interface SidebarProps {
     setActiveChatId: (id: string | null) => void;
     user: any;
     onLogout: () => void;
+    viewMode?: 'chat' | 'cad_studio';
+    setViewMode?: (mode: 'chat' | 'cad_studio') => void;
 }
 
-const Sidebar = ({ isCollapsed, setIsCollapsed, chats, setChats, activeChatId, setActiveChatId, user, onLogout }: SidebarProps) => {
+const Sidebar = ({ isCollapsed, setIsCollapsed, chats, setChats, activeChatId, setActiveChatId, user, onLogout, viewMode = 'chat', setViewMode }: SidebarProps) => {
     
     const handleNewChat = async () => {
+        if (setViewMode) setViewMode('chat');
         try {
             const data = await createChat(user._id);
             const newChat = data.chat;
@@ -52,13 +55,21 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, chats, setChats, activeChatId, s
 
             <div className={styles.middle}>
                 <div className={styles["nav-section"]}>
-                    <div className={`${styles.option} ${styles.active}`}>
+                    <div
+                        className={`${styles.option} ${viewMode === 'chat' ? styles.active : ''}`}
+                        onClick={() => setViewMode && setViewMode('chat')}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <ChatIcon />
                         {!isCollapsed && <span>Recent Chat</span>}
                     </div>
-                    <div className={styles.option}>
-                        <HistoryIcon />
-                        {!isCollapsed && <span>Chat History</span>}
+                    <div
+                        className={`${styles.option} ${viewMode === 'cad_studio' ? styles.active : ''}`}
+                        onClick={() => setViewMode && setViewMode('cad_studio')}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <span>📐</span>
+                        {!isCollapsed && <span>3D CAD Studio</span>}
                     </div>
                 </div>
                 
