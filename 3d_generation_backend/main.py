@@ -172,6 +172,8 @@ async def generate_mesh(req: MeshRequest):
         
         return result
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/modify-mesh")
@@ -192,6 +194,8 @@ async def modify_mesh(req: RefineMeshRequest):
         
         return result
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
