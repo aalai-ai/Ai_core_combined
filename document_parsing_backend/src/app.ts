@@ -93,6 +93,11 @@ app.use('/retrieval', retrievalRoutes);
 app.use('/rag', ragRoutes);
 app.use('/agent', agentRoutes);
 
+// Silent fallback handler for WebSocket handshake probes on port 3000
+app.get('/ws', (_req: Request, res: Response) => {
+  res.status(204).end();
+});
+
 // Catch-all NotFound Route
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(new NotFoundError(`Route ${req.method} ${req.originalUrl} not found`));
