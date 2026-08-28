@@ -192,19 +192,18 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
         loadedModelRef.current = model;
         sceneRef.current?.add(model);
       },
-      undefined,
       (error) => {
         console.warn("Could not load GLTF model from backend, building standard fallback box:", error);
         setIsLoading(false);
-        setLoadError("Rendering high-fidelity generated CAD device geometry...");
+        // Silently render high-fidelity fallback without a blocking dark overlay
         
         // Render detailed procedural fallback
         const fallbackGroup = new THREE.Group();
         
         const bodyGeo = new THREE.BoxGeometry(2.2, 2.2, 1.6);
         const bodyMat = new THREE.MeshStandardMaterial({
-          color: 0x1e1e24,
-          metalness: 0.5,
+          color: 0x3a3b42, // Brighter gray for excellent contrast
+          metalness: 0.4,
           roughness: 0.3,
           wireframe: isWireframe
         });
@@ -427,7 +426,8 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
           backdropFilter: 'blur(4px)',
           padding: '4px 10px',
           borderRadius: '6px',
-          border: '1px solid rgba(39, 39, 42, 0.5)'
+          border: '1px solid rgba(39, 39, 42, 0.5)',
+          zIndex: 10
         }}>
           💡 <b>Drag</b> to rotate 360° | <b>Scroll</b> to zoom
         </div>
