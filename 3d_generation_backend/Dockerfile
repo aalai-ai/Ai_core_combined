@@ -15,7 +15,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu118
-RUN pip install --no-cache-dir fastapi uvicorn trimesh huggingface_hub pyopengl
+RUN pip install --no-cache-dir fastapi uvicorn trimesh huggingface_hub pyopengl scipy networkx
 
 COPY . /app/
 RUN chmod +x /app/entrypoint.sh
