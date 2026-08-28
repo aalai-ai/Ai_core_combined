@@ -65,7 +65,7 @@ class Hunyuan3DEngine:
         # Keypad Buttons
         for i, x in enumerate([-0.6, -0.2, 0.2, 0.6]):
             button = trimesh.creation.cylinder(radius=0.06, height=0.1)
-            button.apply_rotation(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+            button.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
             button.apply_translation([x, -0.5, 0.93])
             button.visual.face_colors = [99, 102, 241, 255] # Blue/purple
             scene.add_geometry(button, node_name=f"button_{i}")
