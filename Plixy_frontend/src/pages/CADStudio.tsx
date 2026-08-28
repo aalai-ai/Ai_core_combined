@@ -25,19 +25,7 @@ export const CADStudio: React.FC = () => {
     matchedFeatures: string[];
     verticesCount: number;
     facesCount: number;
-  }>({
-    glbUrl: `${BACKEND_3D_URL}/assets/sample_device_mesh.glb`,
-    zipBundleUrl: `${BACKEND_3D_URL}/assets/sample_device_mesh_bundle.zip`,
-    meshId: 'mesh_em6436h_v1',
-    fidelityScore: 92,
-    matchedFeatures: [
-      'Front panel LCD display & keypads',
-      'Dual-row 14-pin rear terminal blocks',
-      '35mm DIN-rail mount channel & chamfer',
-    ],
-    verticesCount: 18450,
-    facesCount: 35200,
-  });
+  } | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -129,20 +117,9 @@ export const CADStudio: React.FC = () => {
         });
       }
     } catch (e) {
-      console.warn("Backend dynamic generation endpoint check:", e);
-      setMeshData({
-        glbUrl: `${BACKEND_3D_URL}/assets/sample_device_mesh.glb`,
-        zipBundleUrl: `${BACKEND_3D_URL}/assets/sample_device_mesh_bundle.zip`,
-        meshId: `mesh_${engine}_${Date.now().toString(36).slice(-4)}`,
-        fidelityScore: 94,
-        matchedFeatures: [
-          'Front panel LCD display & keypads',
-          'Dual-row 14-pin rear terminal blocks',
-          '35mm DIN-rail mount channel & chamfer',
-        ],
-        verticesCount: engine === 'hunyuan3d' ? 24500 : engine === 'trellis' ? 19200 : 12400,
-        facesCount: engine === 'hunyuan3d' ? 48000 : engine === 'trellis' ? 38000 : 24000,
-      });
+      console.warn("Backend dynamic generation failed:", e);
+      setMeshData(null);
+      alert("❌ Generation failed. Please verify that the backend engine is running on port 5200.");
     } finally {
       clearTimeout(step1);
       clearTimeout(step2);
@@ -350,38 +327,66 @@ export const CADStudio: React.FC = () => {
         )}
 
         {/* Vision AI Fidelity Score Meter */}
-        <div style={{ background: '#18181b', padding: '16px', borderRadius: '12px', border: '1px solid #27272a' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>🎯 Vision AI Fidelity Score</span>
-            <span
-              style={{
-                fontSize: '14px',
-                fontWeight: 800,
-                color: meshData.fidelityScore >= targetAccuracy ? '#10b981' : '#f59e0b',
-              }}
-            >
-              {meshData.fidelityScore}%
-            </span>
+        {/* Vision AI Fidelity Score Meter */}
+        {meshData && (
+          <div style={{ background: '#18181b', padding: '16px', borderRadius: '12px', border: '1px solid #27272a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>🎯 Vision AI Fidelity Score</span>
+              <span
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  color: meshData.fidelityScore >= targetAccuracy ? '#10b981' : '#f59e0b',
+                }}
+              >
+                {meshData.fidelityScore}%
+              </span>
+            </div>
+            <ul style={{ margin: '10px 0 0 0', paddingLeft: '16px', fontSize: '11px', color: '#71717a' }}>
+              {meshData.matchedFeatures.map((feat, idx) => (
+                <li key={idx} style={{ marginTop: '4px' }}>
+                  ✓ {feat}
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul style={{ margin: '10px 0 0 0', paddingLeft: '16px', fontSize: '11px', color: '#71717a' }}>
-            {meshData.matchedFeatures.map((feat, idx) => (
-              <li key={idx} style={{ marginTop: '4px' }}>
-                ✓ {feat}
-              </li>
-            ))}
-          </ul>
-        </div>
+        )}
       </div>
 
       {/* Right WebGL 3D Viewport Panel */}
       <div style={{ flex: 1, padding: '24px', height: '100vh', boxSizing: 'border-box' }}>
-        <ThreeViewport
-          meshUrl={meshData.glbUrl}
-          zipBundleUrl={meshData.zipBundleUrl}
-          meshId={meshData.meshId}
-          verticesCount={meshData.verticesCount}
-          facesCount={meshData.facesCount}
-        />
+        {meshData ? (
+          <ThreeViewport
+            meshUrl={meshData.glbUrl}
+            zipBundleUrl={meshData.zipBundleUrl}
+            meshId={meshData.meshId}
+            verticesCount={meshData.verticesCount}
+            facesCount={meshData.facesCount}
+          />
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              backgroundColor: '#101114',
+              borderRadius: '16px',
+              border: '1px solid #27272a',
+              color: '#71717a',
+              fontSize: '14px',
+              padding: '40px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📐</div>
+            <h3 style={{ color: '#fafafa', margin: '0 0 8px 0', fontSize: '16px', fontWeight: 600 }}>No 3D Model Loaded</h3>
+            <p style={{ maxWidth: '400px', margin: 0, lineHeight: 1.5, fontSize: '13px' }}>
+              Upload device specification files or enter a generation prompt, then click <b>Generate / Refine 3D Mesh</b> to start AI reconstruction.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -193,93 +193,9 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
         sceneRef.current?.add(model);
       },
       (error) => {
-        console.warn("Could not load GLTF model from backend, building standard fallback box:", error);
+        console.warn("Could not load GLTF model from backend:", error);
         setIsLoading(false);
-        // Silently render high-fidelity fallback without a blocking dark overlay
-        
-        // Render detailed procedural fallback
-        const fallbackGroup = new THREE.Group();
-        
-        const bodyGeo = new THREE.BoxGeometry(2.2, 2.2, 1.6);
-        const bodyMat = new THREE.MeshStandardMaterial({
-          color: 0x3a3b42, // Brighter gray for excellent contrast
-          metalness: 0.4,
-          roughness: 0.3,
-          wireframe: isWireframe
-        });
-        const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-        fallbackGroup.add(bodyMesh);
-
-        const bezelGeo = new THREE.BoxGeometry(2.3, 2.3, 0.15);
-        const bezelMat = new THREE.MeshStandardMaterial({
-          color: 0x27272a,
-          metalness: 0.6,
-          roughness: 0.2,
-          wireframe: isWireframe
-        });
-        const bezelMesh = new THREE.Mesh(bezelGeo, bezelMat);
-        bezelMesh.position.z = 0.85;
-        fallbackGroup.add(bezelMesh);
-
-        const lcdGeo = new THREE.PlaneGeometry(1.6, 1.0);
-        const lcdMat = new THREE.MeshStandardMaterial({
-          color: 0x064e3b,
-          emissive: 0x059669,
-          emissiveIntensity: 0.6,
-          roughness: 0.1,
-          wireframe: isWireframe
-        });
-        const lcdMesh = new THREE.Mesh(lcdGeo, lcdMat);
-        lcdMesh.position.set(0, 0.3, 0.93);
-        fallbackGroup.add(lcdMesh);
-
-        const btnGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.1, 16);
-        const btnMat = new THREE.MeshStandardMaterial({
-          color: 0x6366f1,
-          emissive: 0x4f46e5,
-          emissiveIntensity: 0.4,
-          metalness: 0.5,
-          wireframe: isWireframe
-        });
-
-        [-0.6, -0.2, 0.2, 0.6].forEach((xPos) => {
-          const btnMesh = new THREE.Mesh(btnGeo, btnMat);
-          btnMesh.rotation.x = Math.PI / 2;
-          btnMesh.position.set(xPos, -0.5, 0.93);
-          fallbackGroup.add(btnMesh);
-        });
-
-        const pinGeo = new THREE.BoxGeometry(0.12, 0.4, 0.3);
-        const pinMat = new THREE.MeshStandardMaterial({
-          color: 0xd97706,
-          metalness: 0.9,
-          roughness: 0.1,
-          wireframe: isWireframe
-        });
-
-        for (let i = -0.8; i <= 0.8; i += 0.3) {
-          const topPin = new THREE.Mesh(pinGeo, pinMat);
-          topPin.position.set(i, 0.7, -0.9);
-          fallbackGroup.add(topPin);
-
-          const btmPin = new THREE.Mesh(pinGeo, pinMat);
-          btmPin.position.set(i, -0.7, -0.9);
-          fallbackGroup.add(btmPin);
-        }
-
-        const dinGeo = new THREE.BoxGeometry(2.0, 0.5, 0.2);
-        const dinMat = new THREE.MeshStandardMaterial({
-          color: 0x52525b,
-          metalness: 0.8,
-          roughness: 0.4,
-          wireframe: isWireframe
-        });
-        const dinMesh = new THREE.Mesh(dinGeo, dinMat);
-        dinMesh.position.set(0, 0, -0.9);
-        fallbackGroup.add(dinMesh);
-        
-        loadedModelRef.current = fallbackGroup;
-        sceneRef.current?.add(fallbackGroup);
+        setLoadError("❌ Failed to load the generated 3D model. Please verify that the backend engine is running and CORS is enabled.");
       }
     );
   }, [meshUrl, isWireframe]);
