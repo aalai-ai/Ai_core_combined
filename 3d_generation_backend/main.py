@@ -157,12 +157,86 @@ def health_check():
         "targetAccuracy": int(os.getenv("TARGET_ACCURACY_PERCENT", "85")),
     }
 
+import urllib.request
+import json
+import logging
+
+logger = logging.getLogger("3d_main")
+
+def fetch_document_dimensions(document_id: str) -> dict:
+    try:
+        url = f"http://192.168.10.10:3000/documents/{document_id}/dimensions"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return data.get("dimensions", {})
+    except Exception as e:
+        logger.warning(f"Could not fetch dimensions for {document_id}: {e}")
+    return {}
+
+def fetch_document_metadata(document_id: str) -> dict:
+    try:
+        url = f"http://192.168.10.10:3000/documents/{document_id}/status"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return data
+    except Exception as e:
+        logger.warning(f"Could not fetch metadata for {document_id}: {e}")
+    return {}
+
+def download_image_from_parser(stored_name: str, local_path: str) -> bool:
+    try:
+        url = f"http://192.168.10.10:3000/uploads/{stored_name}"
+        urllib.request.urlretrieve(url, local_path)
+        logger.info(f"Successfully downloaded document image: {stored_name} to {local_path}")
+        return True
+    except Exception as e:
+        logger.warning(f"Could not download image {stored_name}: {e}")
+    return False
+
 @app.post("/generate-mesh")
 async def generate_mesh(req: MeshRequest):
     try:
         engine_choice = req.engine or os.getenv("DEFAULT_3D_MODEL_ENGINE", "hunyuan3d")
+        
+        prompt_str = req.prompt or "Industrial Hardware Component"
+        image_paths = []
+        
+        # 1. Resolve document dimensions and images dynamically
+        if req.documentId:
+            # Fetch dimensions/specs extracted via RAG
+            dims = fetch_document_dimensions(req.documentId)
+            if dims:
+                mech = dims.get("mechanical", {})
+                term = dims.get("terminals", {})
+                disp = dims.get("displayAndControls", {})
+                
+                # Append specs to prompt for dynamic generation
+                specs_desc = f", dimensions {mech.get('width_mm', 96.0)}x{mech.get('height_mm', 96.0)}x{mech.get('depth_mm', 80.0)} mm"
+                if disp.get("buttonCount"):
+                    specs_desc += f", with {disp.get('buttonCount')} buttons"
+                if disp.get("screenWidth_mm"):
+                    specs_desc += f", screen size {disp.get('screenWidth_mm')}x{disp.get('screenHeight_mm')} mm"
+                if term.get("totalCount"):
+                    specs_desc += f", {term.get('totalCount')} terminal pins"
+                
+                prompt_str += specs_desc
+                logger.info(f"Injected RAG dimensions into prompt: {specs_desc}")
+            
+            # Fetch metadata to check for image files
+            meta = fetch_document_metadata(req.documentId)
+            if meta:
+                mime_type = meta.get("mimeType", "")
+                stored_name = meta.get("storedName", "")
+                if "image/" in mime_type and stored_name:
+                    local_img = os.path.join("./static/assets", stored_name)
+                    if download_image_from_parser(stored_name, local_img):
+                        image_paths.append(local_img)
+        
         result = await engine.generate_mesh(
-            prompt=req.prompt or "Industrial Hardware Component",
+            prompt=prompt_str,
+            image_paths=image_paths,
             engine_type=engine_choice,
         )
         

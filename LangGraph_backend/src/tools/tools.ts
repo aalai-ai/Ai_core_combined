@@ -66,6 +66,7 @@ function getToolSchema(name: string) {
       return z.object({
         prompt: z.string().describe("3D model description or prompt."),
         engine: z.string().optional().describe("3D Engine: hunyuan3d, trellis, or instantmesh."),
+        image_paths: z.array(z.string()).optional().describe("Optional list of image paths extracted from the uploaded document to use for reconstruction."),
       });
     case "evaluate_mesh_accuracy":
       return z.object({

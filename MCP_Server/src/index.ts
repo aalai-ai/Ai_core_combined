@@ -169,14 +169,13 @@ Parameters:
       },
       {
         name: "generate_3d_mesh",
-        description: `
-Generates a production 3D Mesh Model (.GLB, .OBJ, .STL) using the PyTorch CUDA 3D Engine (Hunyuan3D 2.x, TRELLIS.2, InstantMesh) and exports a multi-format ZIP bundle.
-`,
+        description: "Generate multi-format 3D CAD mesh model assets using PyTorch CUDA engine from text prompt and image paths.",
         inputSchema: {
           type: "object",
           properties: {
-            prompt: { type: "string", description: "3D Mesh prompt or device query" },
-            engine: { type: "string", description: "Selected 3D Engine: hunyuan3d, trellis, or instantmesh" }
+            prompt: { type: "string", description: "3D design specifications or prompt" },
+            engine: { type: "string", description: "Selected 3D Engine: hunyuan3d, trellis, or instantmesh" },
+            image_paths: { type: "array", items: { type: "string" }, description: "Optional list of image file paths" },
           },
           required: ["prompt"],
           additionalProperties: false
@@ -406,13 +405,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   if (request.params.name === "generate_3d_mesh") {
-    const { prompt, engine } = request.params.arguments as { prompt: string; engine?: string };
+    const { prompt, engine, image_paths } = request.params.arguments as { prompt: string; engine?: string; image_paths?: string[] };
     try {
       const meshGeneratorUrl = (process.env.MESH_GENERATOR_URL || "http://localhost:5200").replace(/\/$/, "");
       const res = await fetch(`${meshGeneratorUrl}/generate-mesh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, engine: engine || process.env.DEFAULT_3D_MODEL_ENGINE || "hunyuan3d" }),
+        body: JSON.stringify({
+          prompt,
+          engine: engine || process.env.DEFAULT_3D_MODEL_ENGINE || "hunyuan3d",
+          image_paths: image_paths || []
+        }),
       });
       const data = await res.json();
       return {

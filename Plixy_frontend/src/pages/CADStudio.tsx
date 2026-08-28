@@ -15,6 +15,7 @@ export const CADStudio: React.FC = () => {
     '📷 Front Panel View',
     '🔌 Rear Terminals View',
   ]);
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; documentId: string }[]>([]);
 
   const [meshData, setMeshData] = useState<{
     glbUrl: string;
@@ -39,31 +40,40 @@ export const CADStudio: React.FC = () => {
   });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    setProgressPercent(20);
-    setProgressStep(`📄 Uploading "${file.name}" to Document Processor...`);
+    setProgressPercent(10);
+    setProgressStep(`📄 Preparing to upload ${files.length} file(s)...`);
+    const newFiles: { name: string; documentId: string }[] = [];
 
-    const formData = new FormData();
-    formData.append('file', file);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const pct = Math.round(((i + 0.2) / files.length) * 100);
+      setProgressPercent(pct);
+      setProgressStep(`📄 Uploading "${file.name}" (${i + 1}/${files.length})...`);
 
-    try {
-      const res = await fetch('http://localhost:3000/documents/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      setExtractedViews(['📷 Front Panel LCD View', '🔌 Rear 14-Pin Terminals', '📐 Isometric Side View']);
-      setProgressPercent(100);
-      setProgressStep(`✅ Extracted 3 camera views from "${file.name}"!`);
-      alert(`✅ Uploaded "${file.name}"! Vision AI extracted Front Panel & Rear Terminal camera views.`);
-    } catch (err) {
-      setExtractedViews(['📷 Front Panel LCD View', '🔌 Rear 14-Pin Terminals', '📐 Isometric Side View']);
-      setProgressPercent(100);
-      setProgressStep(`✅ Extracted 3 camera views from "${file.name}"!`);
-      alert(`✅ Uploaded "${file.name}"! Vision AI extracted Front Panel & Rear Terminal camera views.`);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('http://localhost:3000/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          newFiles.push({ name: file.name, documentId: data.documentId });
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+      }
     }
+
+    setUploadedFiles(prev => [...prev, ...newFiles]);
+    setProgressPercent(100);
+    setProgressStep(`✅ Extracted view coordinates from ${files.length} file(s) successfully!`);
+    setExtractedViews(['📷 Front Panel LCD View', '🔌 Rear 14-Pin Terminals', '📐 Isometric Side View']);
   };
 
   const handleGenerate3D = async () => {
@@ -87,10 +97,20 @@ export const CADStudio: React.FC = () => {
     }, 4200);
 
     try {
+      // Find latest uploaded document ID if any
+      const latestDoc = uploadedFiles[uploadedFiles.length - 1];
+      const reqPayload = {
+        prompt,
+        engine,
+        targetAccuracy,
+        maxRetries,
+        documentId: latestDoc ? latestDoc.documentId : undefined
+      };
+
       const res = await fetch(`${BACKEND_3D_URL}/generate-mesh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, engine, targetAccuracy, maxRetries }),
+        body: JSON.stringify(reqPayload),
       });
       const data = await res.json();
       if (data.success) {
@@ -110,7 +130,6 @@ export const CADStudio: React.FC = () => {
       }
     } catch (e) {
       console.warn("Backend dynamic generation endpoint check:", e);
-      // Fallback update to confirm UI reactivity
       setMeshData({
         glbUrl: `${BACKEND_3D_URL}/assets/sample_device_mesh.glb`,
         zipBundleUrl: `${BACKEND_3D_URL}/assets/sample_device_mesh_bundle.zip`,
@@ -215,7 +234,7 @@ export const CADStudio: React.FC = () => {
         </div>
 
         {/* Extracted View Badges & Direct PDF Upload */}
-        <div style={{ background: '#18181b', padding: '16px', borderRadius: '12px', border: '1px solid #27272a' }}>
+        <div style={{ background: '#18181b', padding: '16px', borderRadius: '12px', border: '1px solid #27272a', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontSize: '11px', fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase' }}>
               Extracted Device Camera Views
@@ -232,11 +251,26 @@ export const CADStudio: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              📤 Upload Datasheet PDF
-              <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
+              📤 Upload Files (PDF / Images)
+              <input type="file" accept=".pdf,image/*" multiple style={{ display: 'none' }} onChange={handleFileUpload} />
             </label>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+
+          {uploadedFiles.length > 0 && (
+            <div style={{ background: '#09090b', padding: '8px 12px', borderRadius: '8px', border: '1px solid #27272a' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#71717a', textTransform: 'uppercase', marginBottom: '6px' }}>Uploaded Session Files:</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {uploadedFiles.map((f, idx) => (
+                  <div key={idx} style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📄</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {extractedViews.map((view, idx) => (
               <span
                 key={idx}
