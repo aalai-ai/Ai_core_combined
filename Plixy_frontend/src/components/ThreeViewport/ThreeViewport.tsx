@@ -154,6 +154,8 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     if (!sceneRef.current) return;
 
+    let active = true;
+
     // Remove existing model if any
     if (loadedModelRef.current) {
       sceneRef.current.remove(loadedModelRef.current);
@@ -167,6 +169,7 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
     loader.load(
       meshUrl,
       (gltf) => {
+        if (!active) return;
         setIsLoading(false);
         const model = gltf.scene;
 
@@ -192,12 +195,18 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
         loadedModelRef.current = model;
         sceneRef.current?.add(model);
       },
+      undefined, // onProgress
       (error) => {
+        if (!active) return;
         console.warn("Could not load GLTF model from backend:", error);
         setIsLoading(false);
         setLoadError("❌ Failed to load the generated 3D model. Please verify that the backend engine is running and CORS is enabled.");
       }
     );
+
+    return () => {
+      active = false;
+    };
   }, [meshUrl, isWireframe]);
 
   // Handle Floating View Preset Button Clicks
