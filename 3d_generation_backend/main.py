@@ -1,7 +1,7 @@
 import os
 import time
 import torch
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,13 +25,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class CORSStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
 # Ensure static directories exist
 os.makedirs("./static/assets", exist_ok=True)
 os.makedirs("./static/snapshots", exist_ok=True)
 
-# Mount static asset & snapshot hosting
-app.mount("/assets", StaticFiles(directory="./static/assets"), name="assets")
-app.mount("/snapshots", StaticFiles(directory="./static/snapshots"), name="snapshots")
+# Mount static asset & snapshot hosting with CORS support
+app.mount("/assets", CORSStaticFiles(directory="./static/assets"), name="assets")
+app.mount("/snapshots", CORSStaticFiles(directory="./static/snapshots"), name="snapshots")
 
 # Initialize 3D Engine & Renderer instances
 engine = Hunyuan3DEngine()

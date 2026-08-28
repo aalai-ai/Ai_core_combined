@@ -141,60 +141,157 @@ class Hunyuan3DEngine:
         # 3. Construct the customized generative 3D Scene
         scene = trimesh.Scene()
 
-        # Generate Main Body Chassis
-        if shape_type == "cylinder":
-            body = trimesh.creation.cylinder(radius=1.1, height=depth)
-            body.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
-        else:
-            body = trimesh.creation.box(extents=(width, height, depth))
-        
-        body.visual.face_colors = body_color
-        scene.add_geometry(body, node_name="body")
+        if "cat" in p_lower:
+            # 🐱 Stylized Cat Mesh
+            # Body
+            cat_body = trimesh.creation.cylinder(radius=0.5, height=1.3)
+            cat_body.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+            cat_body.visual.face_colors = [120, 113, 108, 255] # gray
+            scene.add_geometry(cat_body, node_name="cat_body")
 
-        # Generate Bezel Faceplate
-        if shape_type == "cylinder":
-            bezel = trimesh.creation.cylinder(radius=1.15, height=bezel_thickness)
-            bezel.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+            # Head
+            cat_head = trimesh.creation.icosphere(subdivisions=2, radius=0.45)
+            cat_head.apply_translation([0, 0.5, 0.65])
+            cat_head.visual.face_colors = [120, 113, 108, 255]
+            scene.add_geometry(cat_head, node_name="cat_head")
+
+            # Left Ear
+            ear_l = trimesh.creation.cone(radius=0.12, height=0.25)
+            ear_l.apply_translation([-0.2, 0.9, 0.7])
+            ear_l.visual.face_colors = [244, 63, 94, 255] # Pink inner
+            scene.add_geometry(ear_l, node_name="cat_ear_l")
+
+            # Right Ear
+            ear_r = trimesh.creation.cone(radius=0.12, height=0.25)
+            ear_r.apply_translation([0.2, 0.9, 0.7])
+            ear_r.visual.face_colors = [244, 63, 94, 255]
+            scene.add_geometry(ear_r, node_name="cat_ear_r")
+
+            # Tail
+            cat_tail = trimesh.creation.cylinder(radius=0.06, height=0.7)
+            cat_tail.apply_transform(trimesh.transformations.rotation_matrix(-np.pi/4, [1, 0, 0]))
+            cat_tail.apply_translation([0, 0.35, -0.75])
+            cat_tail.visual.face_colors = [87, 83, 78, 255] # Darker gray tail
+            scene.add_geometry(cat_tail, node_name="cat_tail")
+
+            # Legs
+            for idx, (x, z) in enumerate([(-0.25, 0.35), (0.25, 0.35), (-0.25, -0.35), (0.25, -0.35)]):
+                leg = trimesh.creation.cylinder(radius=0.09, height=0.5)
+                leg.apply_translation([x, -0.5, z])
+                leg.visual.face_colors = [120, 113, 108, 255]
+                scene.add_geometry(leg, node_name=f"cat_leg_{idx}")
+
+        elif "chair" in p_lower:
+            # 🪑 Stylized Chair Mesh
+            # Seat
+            seat = trimesh.creation.box(extents=(1.2, 0.08, 1.2))
+            seat.visual.face_colors = [180, 83, 9, 255] # Amber wood
+            scene.add_geometry(seat, node_name="chair_seat")
+
+            # Backrest
+            back = trimesh.creation.box(extents=(1.2, 0.9, 0.08))
+            back.apply_translation([0, 0.45, -0.55])
+            back.visual.face_colors = [180, 83, 9, 255]
+            scene.add_geometry(back, node_name="chair_back")
+
+            # Legs
+            for idx, (x, z) in enumerate([(-0.5, 0.5), (0.5, 0.5), (-0.5, -0.5), (0.5, -0.5)]):
+                leg = trimesh.creation.cylinder(radius=0.05, height=0.8)
+                leg.apply_translation([x, -0.4, z])
+                leg.visual.face_colors = [30, 41, 59, 255] # Steel legs
+                scene.add_geometry(leg, node_name=f"chair_leg_{idx}")
+
+        elif "table" in p_lower:
+            # 🪵 Stylized Table Mesh
+            # Top
+            top = trimesh.creation.box(extents=(2.2, 0.08, 1.4))
+            top.visual.face_colors = [120, 53, 4, 255] # Mahogany wood
+            scene.add_geometry(top, node_name="table_top")
+
+            # Legs
+            for idx, (x, z) in enumerate([(-1.0, 0.6), (1.0, 0.6), (-1.0, -0.6), (1.0, -0.6)]):
+                leg = trimesh.creation.cylinder(radius=0.07, height=1.0)
+                leg.apply_translation([x, -0.5, z])
+                leg.visual.face_colors = [30, 41, 59, 255]
+                scene.add_geometry(leg, node_name=f"table_leg_{idx}")
+
+        elif "car" in p_lower:
+            # 🚗 Stylized Car Mesh
+            # Main lower body
+            car_body = trimesh.creation.box(extents=(2.0, 0.5, 1.0))
+            car_body.visual.face_colors = body_color
+            scene.add_geometry(car_body, node_name="car_body")
+
+            # Cabin
+            cabin = trimesh.creation.box(extents=(1.1, 0.4, 0.9))
+            cabin.apply_translation([-0.1, 0.45, 0])
+            cabin.visual.face_colors = [30, 41, 59, 255] # Glass cabin
+            scene.add_geometry(cabin, node_name="car_cabin")
+
+            # Wheels
+            for idx, (x, z) in enumerate([(-0.6, 0.5), (0.6, 0.5), (-0.6, -0.5), (0.6, -0.5)]):
+                wheel = trimesh.creation.cylinder(radius=0.25, height=0.15)
+                wheel.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+                wheel.apply_translation([x, -0.25, z])
+                wheel.visual.face_colors = [15, 15, 18, 255] # Black tires
+                scene.add_geometry(wheel, node_name=f"car_wheel_{idx}")
+
         else:
-            bezel = trimesh.creation.box(extents=(width + 0.1, height + 0.1, bezel_thickness))
+            # 🔌 Industrial Power Meter / Hardware Component
+            # Generate Main Body Chassis
+            if shape_type == "cylinder":
+                body = trimesh.creation.cylinder(radius=1.1, height=depth)
+                body.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+            else:
+                body = trimesh.creation.box(extents=(width, height, depth))
             
-        bezel.apply_translation([0, 0, (depth / 2) + (bezel_thickness / 2)])
-        bezel.visual.face_colors = bezel_color
-        scene.add_geometry(bezel, node_name="bezel")
+            body.visual.face_colors = body_color
+            scene.add_geometry(body, node_name="body")
 
-        # Generate Display Screen
-        screen = trimesh.creation.box(extents=(screen_w, screen_h, 0.02))
-        screen.apply_translation([0, 0.3, (depth / 2) + bezel_thickness + 0.01])
-        screen.visual.face_colors = screen_color
-        scene.add_geometry(screen, node_name="screen")
+            # Generate Bezel Faceplate
+            if shape_type == "cylinder":
+                bezel = trimesh.creation.cylinder(radius=1.15, height=bezel_thickness)
+                bezel.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+            else:
+                bezel = trimesh.creation.box(extents=(width + 0.1, height + 0.1, bezel_thickness))
+                
+            bezel.apply_translation([0, 0, (depth / 2) + (bezel_thickness / 2)])
+            bezel.visual.face_colors = bezel_color
+            scene.add_geometry(bezel, node_name="bezel")
 
-        # Generate Keypad Buttons dynamically
-        if button_count > 0:
-            x_offsets = np.linspace(-0.6, 0.6, button_count)
-            for i, x in enumerate(x_offsets):
-                button = trimesh.creation.cylinder(radius=0.06, height=0.1)
-                button.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
-                button.apply_translation([x, -0.5, (depth / 2) + bezel_thickness + 0.05])
-                button.visual.face_colors = button_color
-                scene.add_geometry(button, node_name=f"button_{i}")
+            # Generate Display Screen
+            screen = trimesh.creation.box(extents=(screen_w, screen_h, 0.02))
+            screen.apply_translation([0, 0.3, (depth / 2) + bezel_thickness + 0.01])
+            screen.visual.face_colors = screen_color
+            scene.add_geometry(screen, node_name="screen")
 
-        # Generate Rear Pin Terminals
-        for i in np.arange(-0.8, 0.9, 0.3):
-            top_pin = trimesh.creation.box(extents=(0.12, 0.4, 0.3))
-            top_pin.apply_translation([i, 0.7, -((depth / 2) + 0.15)])
-            top_pin.visual.face_colors = [217, 119, 6, 255]
-            scene.add_geometry(top_pin, node_name=f"pin_top_{i:.1f}")
+            # Generate Keypad Buttons dynamically
+            if button_count > 0:
+                x_offsets = np.linspace(-0.6, 0.6, button_count)
+                for i, x in enumerate(x_offsets):
+                    button = trimesh.creation.cylinder(radius=0.06, height=0.1)
+                    button.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2, [1, 0, 0]))
+                    button.apply_translation([x, -0.5, (depth / 2) + bezel_thickness + 0.05])
+                    button.visual.face_colors = button_color
+                    scene.add_geometry(button, node_name=f"button_{i}")
 
-            btm_pin = trimesh.creation.box(extents=(0.12, 0.4, 0.3))
-            btm_pin.apply_translation([i, -0.7, -((depth / 2) + 0.15)])
-            btm_pin.visual.face_colors = [217, 119, 6, 255]
-            scene.add_geometry(btm_pin, node_name=f"pin_bottom_{i:.1f}")
+            # Generate Rear Pin Terminals
+            for i in np.arange(-0.8, 0.9, 0.3):
+                top_pin = trimesh.creation.box(extents=(0.12, 0.4, 0.3))
+                top_pin.apply_translation([i, 0.7, -((depth / 2) + 0.15)])
+                top_pin.visual.face_colors = [217, 119, 6, 255]
+                scene.add_geometry(top_pin, node_name=f"pin_top_{i:.1f}")
 
-        # Generate back mounting rail clip
-        din = trimesh.creation.box(extents=(width - 0.2, 0.5, 0.2))
-        din.apply_translation([0, 0, -((depth / 2) + 0.1)])
-        din.visual.face_colors = [82, 82, 91, 255]
-        scene.add_geometry(din, node_name="din_rail")
+                btm_pin = trimesh.creation.box(extents=(0.12, 0.4, 0.3))
+                btm_pin.apply_translation([i, -0.7, -((depth / 2) + 0.15)])
+                btm_pin.visual.face_colors = [217, 119, 6, 255]
+                scene.add_geometry(btm_pin, node_name=f"pin_bottom_{i:.1f}")
+
+            # Generate back mounting rail clip
+            din = trimesh.creation.box(extents=(width - 0.2, 0.5, 0.2))
+            din.apply_translation([0, 0, -((depth / 2) + 0.1)])
+            din.visual.face_colors = [82, 82, 91, 255]
+            scene.add_geometry(din, node_name="din_rail")
 
         # 4. Export scene geometries to binary and text format files
         glb_data = scene.export(file_type='glb')
