@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import path from 'path';
+import fs from 'fs';
 import { MinioService } from './utils/minio';
 import { logger } from './utils/logger';
 import { NotFoundError } from './utils/errors';
@@ -66,10 +67,19 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // 11. Mount Business Routes
 app.use('/uploads', async (req, res, next) => {
+  let relativeKey = req.path.replace(/^\/+/, ''); // e.g. "original/uuid.png"
+
+  // Fallback: if the key doesn't start with a folder prefix, prepend 'original/'
+  if (relativeKey && 
+      !relativeKey.startsWith('original/') && 
+      !relativeKey.startsWith('json/') && 
+      !relativeKey.startsWith('markdown/')) {
+    relativeKey = `original/${relativeKey}`;
+  }
+
   if (config.storageProvider === 'minio') {
     try {
       const minio = MinioService.getInstance();
-      const relativeKey = req.path.replace(/^\/+/, ''); // e.g. "original/uuid.png"
       logger.info(`[App] Streaming file from MinIO: ${relativeKey}`);
       const buffer = await minio.getObjectBuffer(relativeKey);
       
@@ -85,7 +95,12 @@ app.use('/uploads', async (req, res, next) => {
       next(err);
     }
   } else {
-    next();
+    const localPath = path.join(config.uploadsDir, relativeKey);
+    if (fs.existsSync(localPath)) {
+      res.sendFile(localPath);
+    } else {
+      next();
+    }
   }
 }, express.static(config.uploadsDir));
 app.use('/documents', documentRoutes);

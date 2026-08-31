@@ -643,4 +643,29 @@ export class DocumentController {
       next(error);
     }
   };
+
+  /**
+   * GET /documents
+   * Lists uploaded documents filtered by query parameters.
+   */
+  public listDocuments = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const mime = req.query.mime as string;
+      const filter: Record<string, any> = {};
+      if (mime) {
+        filter.mimeType = { $regex: new RegExp(mime, 'i') };
+      }
+      const docs = await this.documentRepository.find(filter);
+      res.status(200).json({
+        success: true,
+        documents: docs,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
