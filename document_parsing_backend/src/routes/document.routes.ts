@@ -50,4 +50,7 @@ router.get('/:id/index-status', controller.getIndexStatus);
 // GET /documents/:id/dimensions
 router.get('/:id/dimensions', controller.getDimensions);
 
+// GET /documents
+router.get('/', controller.listDocuments);
+
 export default router;

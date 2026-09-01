@@ -375,8 +375,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      let imageUrls: string[] = [];
+      try {
+        const imagesRes = await fetch(`${parserUrl}/documents?mime=image`);
+        if (imagesRes.ok) {
+          const imagesData = await imagesRes.json() as any;
+          if (imagesData.success && Array.isArray(imagesData.documents)) {
+            imageUrls = imagesData.documents.map((img: any) => `http://localhost:5100/uploads/${img.filePath}`);
+          }
+        }
+      } catch (imgErr) {
+        console.error("Error fetching images for 3d prompt:", imgErr);
+      }
+
       const builder = new (require("./services/blenderScriptBuilder.service").BlenderScriptBuilderService)();
-      const output = builder.build3DPrompt(dimensions);
+      const output = builder.build3DPrompt(dimensions, imageUrls);
 
       return {
         content: [

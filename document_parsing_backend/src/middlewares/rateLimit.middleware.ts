@@ -27,6 +27,10 @@ export const globalIpRateLimiter = rateLimit({
   max: securityConfig.rateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const ip = req.ip || req.socket.remoteAddress;
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  },
   store: new RedisStore({
     // @ts-ignore
     sendCommand: (...args: string[]) => {

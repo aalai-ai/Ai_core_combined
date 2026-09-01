@@ -23,6 +23,7 @@ export function createAgentWorkflow() {
     .addNode('end', endNode);
 
   // Set sequence path flow edges
+  //test
   workflow.addEdge(START, 'start');
   workflow.addEdge('start', 'intentDetection');
   workflow.addEdge('intentDetection', 'planning');
