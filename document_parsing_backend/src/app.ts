@@ -36,9 +36,16 @@ app.use(correlationMiddleware);
 // 3. Security Middlewares
 app.use(helmet());
 app.use(cors({
-  origin: securityConfig.corsOrigin,
+  origin: (origin, callback) => {
+    if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'x-correlation-id'],
+  credentials: true,
 }));
 
 // 4. Rate Limiting (IP-based protection on all routes)
