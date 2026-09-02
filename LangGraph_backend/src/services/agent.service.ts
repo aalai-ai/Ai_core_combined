@@ -62,8 +62,9 @@ export async function streamAgent(
         const toolContentStr = (msg as any).content?.toString() || "";
         try {
           const parsed = JSON.parse(toolContentStr);
-          if (parsed && (parsed.result || parsed.artDirectorBrief || parsed.claudeMcpPrompt)) {
-            const data = parsed.result || parsed;
+          const data = parsed?.data?.result || parsed?.result || parsed?.data || parsed;
+          
+          if (data && (data.artDirectorBrief || data.claudeMcpPrompt || data.markdownTable || data.blenderBpyScript)) {
             const formattedOutput = [
               data.artDirectorBrief || "",
               data.markdownTable || "",
