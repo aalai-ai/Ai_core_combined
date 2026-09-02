@@ -64,19 +64,26 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const server = http.createServer(app);
 
 async function start() {
-  await connectDB();
-  await checkOllamaModels();
-
-  const mcpClient = await createMcpClient();
-  const tools = await loadTools(mcpClient);
-
-  await initAgent(tools, createAgent);
-
-  initSocket(server);
-
   server.listen(config.port, () => {
     console.log(`🚀 Server running on http://localhost:${config.port}`);
   });
+
+  await connectDB();
+  try {
+    await checkOllamaModels();
+  } catch (err: any) {
+    console.warn("⚠️ Ollama check warning:", err.message);
+  }
+
+  try {
+    const mcpClient = await createMcpClient();
+    const tools = await loadTools(mcpClient);
+    await initAgent(tools, createAgent);
+  } catch (mcpErr: any) {
+    console.warn("⚠️ MCP Client init warning:", mcpErr.message);
+  }
+
+  initSocket(server);
 }
 
 start();

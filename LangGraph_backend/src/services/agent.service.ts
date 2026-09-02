@@ -45,7 +45,7 @@ export async function streamAgent(
         ? (msg as any)._getType() 
         : (typeof (msg as any).getType === "function" ? (msg as any).getType() : "");
 
-      // Only stream AI response text tokens to the frontend user
+      // 1. If it's an AI message text token
       if (msgType === "ai" || (!msgType && msg.constructor?.name?.includes("AI"))) {
         if ((msg as any).content) {
           onToken((msg as any).content.toString());
@@ -54,6 +54,36 @@ export async function streamAgent(
         const toolCalls = (msg as any).tool_calls || (msg as any).additional_kwargs?.tool_calls;
         if (toolCalls && toolCalls.length) {
           onTool(toolCalls);
+        }
+      }
+
+      // 2. If it's a Tool message (result from generate_3d_prompt or get_grounding_context)
+      if (msgType === "tool" || (!msgType && msg.constructor?.name?.includes("Tool"))) {
+        const toolContentStr = (msg as any).content?.toString() || "";
+        try {
+          const parsed = JSON.parse(toolContentStr);
+          if (parsed && (parsed.result || parsed.artDirectorBrief || parsed.claudeMcpPrompt)) {
+            const data = parsed.result || parsed;
+            const formattedOutput = [
+              data.artDirectorBrief || "",
+              data.markdownTable || "",
+              data.claudeMcpPrompt ? `\n\`\`\`text\n${data.claudeMcpPrompt}\n\`\`\`` : "",
+              data.blenderBpyScript ? `\n\`\`\`python\n${data.blenderBpyScript}\n\`\`\`` : "",
+              Array.isArray(data.images) && data.images.length > 0
+                ? data.images.map((img: string) => `\n![Device Reference](${img})`).join("\n")
+                : ""
+            ].filter(Boolean).join("\n\n");
+
+            if (formattedOutput) {
+              onToken(formattedOutput);
+            }
+          } else if (toolContentStr) {
+            onToken(toolContentStr);
+          }
+        } catch (e) {
+          if (toolContentStr) {
+            onToken(toolContentStr);
+          }
         }
       }
     }

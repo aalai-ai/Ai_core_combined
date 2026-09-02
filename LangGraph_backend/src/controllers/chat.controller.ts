@@ -46,11 +46,17 @@ export const getUserChats = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "userId parameter is required" });
     }
 
-    // Fetch only chatId, title, and updatedAt for the sidebar
     const chats = await Chat.find(
       { userId },
       { chatId: 1, title: 1, updatedAt: 1 }
     ).sort({ updatedAt: -1 });
+
+    return res.status(200).json(chats);
+  } catch (error) {
+    console.error("Error fetching user chats:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const postChatMessage = async (req: Request, res: Response) => {
   try {
@@ -58,25 +64,36 @@ export const postChatMessage = async (req: Request, res: Response) => {
     const finalChatId = chatId || crypto.randomUUID();
     const finalUserId = userId || "user_default_3d_studio";
 
-    let chat = await Chat.findOne({ chatId: finalChatId });
-    if (!chat) {
-      chat = new Chat({ chatId: finalChatId, userId: finalUserId, messages: [] });
+    let history: any[] = [];
+    try {
+      let chat = await Chat.findOne({ chatId: finalChatId });
+      if (chat && chat.messages) {
+        history = chat.messages;
+      }
+    } catch (dbErr) {
+      console.warn("MongoDB offline, executing prompt generation in memory mode.");
     }
-
-    chat.messages.push({ role: "user", content: message });
-    await chat.save();
 
     let fullAiResponse = "";
     await streamAgent(
       message,
-      chat.messages,
+      history,
       (token) => { fullAiResponse += token; },
       (tool) => {},
       applicationId || "3d_prompt_generator"
     );
 
-    chat.messages.push({ role: "ai", content: fullAiResponse });
-    await chat.save();
+    try {
+      let chat = await Chat.findOne({ chatId: finalChatId });
+      if (!chat) {
+        chat = new Chat({ chatId: finalChatId, userId: finalUserId, messages: [] });
+      }
+      chat.messages.push({ role: "user", content: message });
+      chat.messages.push({ role: "ai", content: fullAiResponse });
+      await chat.save();
+    } catch (saveErr) {
+      // Ephemeral mode ignore DB write errors
+    }
 
     return res.status(200).json({
       chatId: finalChatId,
