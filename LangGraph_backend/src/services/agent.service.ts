@@ -71,7 +71,10 @@ export async function streamAgent(
               data.claudeMcpPrompt ? `\n\`\`\`text\n${data.claudeMcpPrompt}\n\`\`\`` : "",
               data.blenderBpyScript ? `\n\`\`\`python\n${data.blenderBpyScript}\n\`\`\`` : "",
               Array.isArray(data.images) && data.images.length > 0
-                ? data.images.map((img: string) => `\n![Device Reference](${img})`).join("\n")
+                ? data.images.slice(0, 4).map((img: string, idx: number) => {
+                    const angles = ["Front Angle (Panel & Display)", "Rear Angle (Terminals & Rail)", "Isometric Angle (3D Perspective)", "Side & Cutout Angle"];
+                    return `\n![${angles[idx] || `Orthographic Angle ${idx + 1}`}](${img})`;
+                  }).join("\n")
                 : ""
             ].filter(Boolean).join("\n\n");
 

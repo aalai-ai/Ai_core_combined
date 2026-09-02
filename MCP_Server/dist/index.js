@@ -351,8 +351,20 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                 const imagesRes = await fetch(`${parserUrl}/documents?mime=image`);
                 if (imagesRes.ok) {
                     const imagesData = await imagesRes.json();
-                    if (imagesData.success && Array.isArray(imagesData.documents)) {
-                        imageUrls = imagesData.documents.map((img) => `http://localhost:5100/uploads/${img.filePath}`);
+                    if (imagesData.success && Array.isArray(imagesData.documents) && imagesData.documents.length > 0) {
+                        const rawImgs = imagesData.documents.map((img) => `http://localhost:5100/uploads/${img.filePath}`);
+                        if (rawImgs.length > 4) {
+                            const step = Math.floor(rawImgs.length / 4);
+                            imageUrls = [
+                                rawImgs[0],
+                                rawImgs[Math.min(step, rawImgs.length - 1)],
+                                rawImgs[Math.min(step * 2, rawImgs.length - 1)],
+                                rawImgs[Math.min(step * 3, rawImgs.length - 1)],
+                            ];
+                        }
+                        else {
+                            imageUrls = rawImgs;
+                        }
                     }
                 }
             }
