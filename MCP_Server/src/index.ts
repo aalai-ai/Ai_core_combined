@@ -8,6 +8,10 @@ import {
 
 import { startPolling, getCachedLiveData } from "./services/plc.service";
 import { queryAnalysisData } from "./services/influx.service";
+import {
+  deviceRegistryToolDefinitions,
+  handleDeviceRegistryToolCall,
+} from "./tools/deviceRegistry.tool";
 
 startPolling();
 
@@ -23,7 +27,7 @@ const server = new Server(
   }
 );
 
-// Tell Cursor what tools exist
+// Tell clients what tools exist
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
@@ -53,8 +57,8 @@ Response format:
         inputSchema: {
           type: "object",
           properties: {},
-          additionalProperties: false
-        }
+          additionalProperties: false,
+        },
       },
       {
         name: "get_analysis_data",
@@ -88,20 +92,20 @@ Response format:
           properties: {
             range: {
               type: "string",
-              description: "Time range (e.g., 1h, 24h, 7d)"
+              description: "Time range (e.g., 1h, 24h, 7d)",
             },
             field: {
               type: "string",
-              description: "PLC field name"
+              description: "PLC field name",
             },
             aggregation: {
               type: "string",
-              enum: ["mean", "sum", "min", "max"]
-            }
+              enum: ["mean", "sum", "min", "max"],
+            },
           },
           required: ["range"],
-          additionalProperties: false
-        }
+          additionalProperties: false,
+        },
       },
       {
         name: "get_grounding_context",
@@ -130,12 +134,12 @@ Response format:
           properties: {
             query: {
               type: "string",
-              description: "The search query to look up in manual chunks"
-            }
+              description: "The search query to look up in manual chunks",
+            },
           },
           required: ["query"],
-          additionalProperties: false
-        }
+          additionalProperties: false,
+        },
       },
       {
         name: "generate_3d_prompt",
@@ -156,30 +160,41 @@ Parameters:
           properties: {
             query: {
               type: "string",
-              description: "Search query phrase or model name for 3D spec generation"
+              description: "Search query phrase or model name for 3D spec generation",
             },
             documentId: {
               type: "string",
-              description: "Optional specific document ID"
-            }
+              description: "Optional specific document ID",
+            },
           },
           required: ["query"],
-          additionalProperties: false
-        }
+          additionalProperties: false,
+        },
       },
       {
         name: "generate_3d_mesh",
-        description: "Generate multi-format 3D CAD mesh model assets using PyTorch CUDA engine from text prompt and image paths.",
+        description:
+          "Generate multi-format 3D CAD mesh model assets using PyTorch CUDA engine from text prompt and image paths.",
         inputSchema: {
           type: "object",
           properties: {
-            prompt: { type: "string", description: "3D design specifications or prompt" },
-            engine: { type: "string", description: "Selected 3D Engine: hunyuan3d, trellis, or instantmesh" },
-            image_paths: { type: "array", items: { type: "string" }, description: "Optional list of image file paths" },
+            prompt: {
+              type: "string",
+              description: "3D design specifications or prompt",
+            },
+            engine: {
+              type: "string",
+              description: "Selected 3D Engine: hunyuan3d, trellis, or instantmesh",
+            },
+            image_paths: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional list of image file paths",
+            },
           },
           required: ["prompt"],
-          additionalProperties: false
-        }
+          additionalProperties: false,
+        },
       },
       {
         name: "evaluate_mesh_accuracy",
@@ -189,19 +204,34 @@ Evaluates generated 3D Mesh synthetic snapshots against ground-truth source phot
         inputSchema: {
           type: "object",
           properties: {
-            meshId: { type: "string", description: "Generated 3D mesh identifier" }
+            meshId: { type: "string", description: "Generated 3D mesh identifier" },
           },
           required: ["meshId"],
-          additionalProperties: false
-        }
-      }
+          additionalProperties: false,
+        },
+      },
+      ...deviceRegistryToolDefinitions,
     ],
   };
 });
 
 // Handle tool execution
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "get_live_data") {
+  const { name, arguments: args } = request.params;
+
+  if (name.startsWith("device_registry_")) {
+    const result = await handleDeviceRegistryToolCall(name, args);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (name === "get_live_data") {
     const data = getCachedLiveData();
 
     return {
@@ -218,13 +248,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 
-  if (request.params.name === "get_analysis_data") {
-    const { range, field, aggregation } =
-      request.params.arguments as {
-        range: string;
-        field?: string;
-        aggregation?: "mean" | "sum" | "min" | "max";
-      };
+  if (name === "get_analysis_data") {
+    const { range, field, aggregation } = (args || {}) as {
+      range: string;
+      field?: string;
+      aggregation?: "mean" | "sum" | "min" | "max";
+    };
 
     const options: any = { range };
 
@@ -243,19 +272,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 
-  if (request.params.name === "get_grounding_context") {
-    const { query } = request.params.arguments as { query: string };
+  if (name === "get_grounding_context") {
+    const { query } = (args || {}) as { query: string };
 
     try {
-      const parserUrl = (process.env.DOCUMENT_PARSER_URL || "http://localhost:3000").replace(/\/$/, "");
+      const parserUrl = (
+        process.env.DOCUMENT_PARSER_URL || "http://localhost:3000"
+      ).replace(/\/$/, "");
       const response = await fetch(`${parserUrl}/retrieval/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query,
           options: {
-            minimumScore: -1.0
-          }
+            minimumScore: -1.0,
+          },
         }),
       });
 
@@ -290,39 +321,47 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   }
 
-  if (request.params.name === "generate_3d_prompt") {
-    const { query, documentId } = request.params.arguments as { query: string; documentId?: string };
+  if (name === "generate_3d_prompt") {
+    const { query, documentId } = (args || {}) as {
+      query: string;
+      documentId?: string;
+    };
 
     try {
-      const parserUrl = (process.env.DOCUMENT_PARSER_URL || "http://localhost:3000").replace(/\/$/, "");
+      const parserUrl = (
+        process.env.DOCUMENT_PARSER_URL || "http://localhost:3000"
+      ).replace(/\/$/, "");
       let dimensions: any = null;
 
       if (documentId) {
-        const res = await fetch(`${parserUrl}/documents/${documentId}/dimensions`);
+        const res = await fetch(
+          `${parserUrl}/documents/${documentId}/dimensions`
+        );
         if (res.ok) {
-          const data = await res.json() as any;
+          const data = (await res.json()) as any;
           dimensions = data.dimensions;
         }
       }
 
       if (!dimensions) {
-        // Retrieve grounding text and generate specs
         const searchRes = await fetch(`${parserUrl}/retrieval/search`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: query || "dimensions terminals rear panel cutout" }),
+          body: JSON.stringify({
+            query: query || "dimensions terminals rear panel cutout",
+          }),
         });
-        
+
         let textContext = query;
         if (searchRes.ok) {
-          const searchData = await searchRes.json() as any;
+          const searchData = (await searchRes.json()) as any;
           if (searchData.results && searchData.results.length > 0) {
-            textContext = searchData.results.map((r: any) => r.content).join("\n\n");
+            textContext = searchData.results
+              .map((r: any) => r.content)
+              .join("\n\n");
           }
         }
 
-        const builder = new (require("./services/blenderScriptBuilder.service").BlenderScriptBuilderService)();
-        // Generate prompt from text context heuristics / fallback
         dimensions = {
           modelName: query || "Industrial Power Device",
           lodLevel: textContext.includes("rear panel") ? "LoD 3" : "LoD 2",
@@ -345,7 +384,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             pinsPerRow: 7,
             pitchSpacing_mm: 5.08,
             screwType: "Phillips/Flathead Combo",
-            silkscreenLabels: ["A1", "A2", "A3", "V1", "V2", "V3", "VN", "RS485+", "RS485-", "AUX1", "AUX2"],
+            silkscreenLabels: [
+              "A1",
+              "A2",
+              "A3",
+              "V1",
+              "V2",
+              "V3",
+              "VN",
+              "RS485+",
+              "RS485-",
+              "AUX1",
+              "AUX2",
+            ],
           },
           displayAndControls: {
             screenWidth_mm: 65.0,
@@ -428,17 +479,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   }
 
-  if (request.params.name === "generate_3d_mesh") {
-    const { prompt, engine, image_paths } = request.params.arguments as { prompt: string; engine?: string; image_paths?: string[] };
+  if (name === "generate_3d_mesh") {
+    const { prompt, engine, image_paths } = (args || {}) as {
+      prompt: string;
+      engine?: string;
+      image_paths?: string[];
+    };
     try {
-      const meshGeneratorUrl = (process.env.MESH_GENERATOR_URL || "http://localhost:5200").replace(/\/$/, "");
+      const meshGeneratorUrl = (
+        process.env.MESH_GENERATOR_URL || "http://localhost:5200"
+      ).replace(/\/$/, "");
       const res = await fetch(`${meshGeneratorUrl}/generate-mesh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
           engine: engine || process.env.DEFAULT_3D_MODEL_ENGINE || "hunyuan3d",
-          image_paths: image_paths || []
+          image_paths: image_paths || [],
         }),
       });
       const data = await res.json();
@@ -447,33 +504,47 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     } catch (err: any) {
       return {
-        content: [{ type: "text", text: JSON.stringify({ success: false, error: err.message }) }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ success: false, error: err.message }),
+          },
+        ],
       };
     }
   }
 
-  if (request.params.name === "evaluate_mesh_accuracy") {
-    const { meshId } = request.params.arguments as { meshId: string };
+  if (name === "evaluate_mesh_accuracy") {
+    const { meshId } = (args || {}) as { meshId: string };
     try {
       const evaluator = new (require("./services/meshAccuracyEvaluator.service").MeshAccuracyEvaluatorService)();
-      const report = await evaluator.evaluateMeshFidelity({
-        front: `http://localhost:5200/snapshots/${meshId}_front_0deg.jpg`,
-        rear: `http://localhost:5200/snapshots/${meshId}_rear_180deg.jpg`,
-      }, [], 1);
+      const report = await evaluator.evaluateMeshFidelity(
+        {
+          front: `http://localhost:5200/snapshots/${meshId}_front_0deg.jpg`,
+          rear: `http://localhost:5200/snapshots/${meshId}_rear_180deg.jpg`,
+        },
+        [],
+        1
+      );
       return {
-        content: [{ type: "text", text: JSON.stringify({ success: true, report }) }],
+        content: [
+          { type: "text", text: JSON.stringify({ success: true, report }) },
+        ],
       };
     } catch (err: any) {
       return {
-        content: [{ type: "text", text: JSON.stringify({ success: false, error: err.message }) }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ success: false, error: err.message }),
+          },
+        ],
       };
     }
   }
 
   throw new Error("Tool not found");
 });
-
-
 
 // Connect stdio transport
 (async () => {

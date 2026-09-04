@@ -5,6 +5,7 @@ const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 const plc_service_1 = require("./services/plc.service");
 const influx_service_1 = require("./services/influx.service");
+const deviceRegistry_tool_1 = require("./tools/deviceRegistry.tool");
 (0, plc_service_1.startPolling)();
 const server = new index_js_1.Server({
     name: "plc-live-server",
@@ -14,7 +15,7 @@ const server = new index_js_1.Server({
         tools: {},
     },
 });
-// Tell Cursor what tools exist
+// Tell clients what tools exist
 server.setRequestHandler(types_js_1.ListToolsRequestSchema, async () => {
     return {
         tools: [
@@ -44,8 +45,8 @@ Response format:
                 inputSchema: {
                     type: "object",
                     properties: {},
-                    additionalProperties: false
-                }
+                    additionalProperties: false,
+                },
             },
             {
                 name: "get_analysis_data",
@@ -79,20 +80,20 @@ Response format:
                     properties: {
                         range: {
                             type: "string",
-                            description: "Time range (e.g., 1h, 24h, 7d)"
+                            description: "Time range (e.g., 1h, 24h, 7d)",
                         },
                         field: {
                             type: "string",
-                            description: "PLC field name"
+                            description: "PLC field name",
                         },
                         aggregation: {
                             type: "string",
-                            enum: ["mean", "sum", "min", "max"]
-                        }
+                            enum: ["mean", "sum", "min", "max"],
+                        },
                     },
                     required: ["range"],
-                    additionalProperties: false
-                }
+                    additionalProperties: false,
+                },
             },
             {
                 name: "get_grounding_context",
@@ -121,12 +122,12 @@ Response format:
                     properties: {
                         query: {
                             type: "string",
-                            description: "The search query to look up in manual chunks"
-                        }
+                            description: "The search query to look up in manual chunks",
+                        },
                     },
                     required: ["query"],
-                    additionalProperties: false
-                }
+                    additionalProperties: false,
+                },
             },
             {
                 name: "generate_3d_prompt",
@@ -147,12 +148,12 @@ Parameters:
                     properties: {
                         query: {
                             type: "string",
-                            description: "Search query phrase or model name for 3D spec generation"
+                            description: "Search query phrase or model name for 3D spec generation",
                         },
                         documentId: {
                             type: "string",
-                            description: "Optional specific document ID"
-                        }
+                            description: "Optional specific document ID",
+                        },
                     },
                     required: ["query"],
                     additionalProperties: false
@@ -164,13 +165,23 @@ Parameters:
                 inputSchema: {
                     type: "object",
                     properties: {
-                        prompt: { type: "string", description: "3D design specifications or prompt" },
-                        engine: { type: "string", description: "Selected 3D Engine: hunyuan3d, trellis, or instantmesh" },
-                        image_paths: { type: "array", items: { type: "string" }, description: "Optional list of image file paths" },
+                        prompt: {
+                            type: "string",
+                            description: "3D design specifications or prompt",
+                        },
+                        engine: {
+                            type: "string",
+                            description: "Selected 3D Engine: hunyuan3d, trellis, or instantmesh",
+                        },
+                        image_paths: {
+                            type: "array",
+                            items: { type: "string" },
+                            description: "Optional list of image file paths",
+                        },
                     },
                     required: ["prompt"],
-                    additionalProperties: false
-                }
+                    additionalProperties: false,
+                },
             },
             {
                 name: "evaluate_mesh_accuracy",
@@ -180,18 +191,31 @@ Evaluates generated 3D Mesh synthetic snapshots against ground-truth source phot
                 inputSchema: {
                     type: "object",
                     properties: {
-                        meshId: { type: "string", description: "Generated 3D mesh identifier" }
+                        meshId: { type: "string", description: "Generated 3D mesh identifier" },
                     },
                     required: ["meshId"],
-                    additionalProperties: false
-                }
-            }
+                    additionalProperties: false,
+                },
+            },
+            ...deviceRegistry_tool_1.deviceRegistryToolDefinitions,
         ],
     };
 });
 // Handle tool execution
 server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
-    if (request.params.name === "get_live_data") {
+    const { name, arguments: args } = request.params;
+    if (name.startsWith("device_registry_")) {
+        const result = await (0, deviceRegistry_tool_1.handleDeviceRegistryToolCall)(name, args);
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify(result, null, 2),
+                },
+            ],
+        };
+    }
+    if (name === "get_live_data") {
         const data = (0, plc_service_1.getCachedLiveData)();
         return {
             content: [
@@ -206,8 +230,8 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
             ],
         };
     }
-    if (request.params.name === "get_analysis_data") {
-        const { range, field, aggregation } = request.params.arguments;
+    if (name === "get_analysis_data") {
+        const { range, field, aggregation } = (args || {});
         const options = { range };
         if (field !== undefined)
             options.field = field;
@@ -223,8 +247,8 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
             ],
         };
     }
-    if (request.params.name === "get_grounding_context") {
-        const { query } = request.params.arguments;
+    if (name === "get_grounding_context") {
+        const { query } = (args || {});
         try {
             const parserUrl = (process.env.DOCUMENT_PARSER_URL || "http://localhost:3000").replace(/\/$/, "");
             const response = await fetch(`${parserUrl}/retrieval/search`, {
@@ -233,8 +257,8 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                 body: JSON.stringify({
                     query,
                     options: {
-                        minimumScore: -1.0
-                    }
+                        minimumScore: -1.0,
+                    },
                 }),
             });
             if (!response.ok) {
@@ -267,34 +291,35 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
             };
         }
     }
-    if (request.params.name === "generate_3d_prompt") {
-        const { query, documentId } = request.params.arguments;
+    if (name === "generate_3d_prompt") {
+        const { query, documentId } = (args || {});
         try {
             const parserUrl = (process.env.DOCUMENT_PARSER_URL || "http://localhost:3000").replace(/\/$/, "");
             let dimensions = null;
             if (documentId) {
                 const res = await fetch(`${parserUrl}/documents/${documentId}/dimensions`);
                 if (res.ok) {
-                    const data = await res.json();
+                    const data = (await res.json());
                     dimensions = data.dimensions;
                 }
             }
             if (!dimensions) {
-                // Retrieve grounding text and generate specs
                 const searchRes = await fetch(`${parserUrl}/retrieval/search`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ query: query || "dimensions terminals rear panel cutout" }),
+                    body: JSON.stringify({
+                        query: query || "dimensions terminals rear panel cutout",
+                    }),
                 });
                 let textContext = query;
                 if (searchRes.ok) {
-                    const searchData = await searchRes.json();
+                    const searchData = (await searchRes.json());
                     if (searchData.results && searchData.results.length > 0) {
-                        textContext = searchData.results.map((r) => r.content).join("\n\n");
+                        textContext = searchData.results
+                            .map((r) => r.content)
+                            .join("\n\n");
                     }
                 }
-                const builder = new (require("./services/blenderScriptBuilder.service").BlenderScriptBuilderService)();
-                // Generate prompt from text context heuristics / fallback
                 dimensions = {
                     modelName: query || "Industrial Power Device",
                     lodLevel: textContext.includes("rear panel") ? "LoD 3" : "LoD 2",
@@ -317,7 +342,19 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                         pinsPerRow: 7,
                         pitchSpacing_mm: 5.08,
                         screwType: "Phillips/Flathead Combo",
-                        silkscreenLabels: ["A1", "A2", "A3", "V1", "V2", "V3", "VN", "RS485+", "RS485-", "AUX1", "AUX2"],
+                        silkscreenLabels: [
+                            "A1",
+                            "A2",
+                            "A3",
+                            "V1",
+                            "V2",
+                            "V3",
+                            "VN",
+                            "RS485+",
+                            "RS485-",
+                            "AUX1",
+                            "AUX2",
+                        ],
                     },
                     displayAndControls: {
                         screenWidth_mm: 65.0,
