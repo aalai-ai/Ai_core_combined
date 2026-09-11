@@ -64,19 +64,31 @@ export async function streamAgent(
           const parsed = JSON.parse(toolContentStr);
           const data = parsed?.data?.result || parsed?.result || parsed?.data || parsed;
           
-          if (data && (data.artDirectorBrief || data.claudeMcpPrompt || data.markdownTable || data.blenderBpyScript)) {
-            const formattedOutput = [
-              data.artDirectorBrief || "",
-              data.markdownTable || "",
-              data.claudeMcpPrompt ? `\n\`\`\`text\n${data.claudeMcpPrompt}\n\`\`\`` : "",
-              data.blenderBpyScript ? `\n\`\`\`python\n${data.blenderBpyScript}\n\`\`\`` : "",
-              Array.isArray(data.images) && data.images.length > 0
-                ? data.images.slice(0, 4).map((img: string, idx: number) => {
-                    const angles = ["Front Angle (Panel & Display)", "Rear Angle (Terminals & Rail)", "Isometric Angle (3D Perspective)", "Side & Cutout Angle"];
-                    return `\n![${angles[idx] || `Orthographic Angle ${idx + 1}`}](${img})`;
-                  }).join("\n")
-                : ""
-            ].filter(Boolean).join("\n\n");
+          if (data && (data.masterPrompt || data.artDirectorBrief || data.claudeMcpPrompt || data.markdownTable || data.blenderBpyScript)) {
+            let formattedOutput = "";
+            if (data.masterPrompt) {
+              formattedOutput = data.masterPrompt;
+              if (Array.isArray(data.images) && data.images.length > 0) {
+                const imgGallery = data.images.slice(0, 4).map((img: string, idx: number) => {
+                  const angles = ["Front View (Panel & Display)", "Rear View (Terminals & Wiring)", "Side Profile (Flange & Retainer Clip)", "Perspective (Isometric Angle)"];
+                  return `\n![${angles[idx] || `Reference Image ${idx + 1}`}](${img})`;
+                }).join("\n");
+                formattedOutput += `\n\n### 4. Reference Images & Drawings\n${imgGallery}`;
+              }
+            } else {
+              formattedOutput = [
+                data.artDirectorBrief || "",
+                data.markdownTable || "",
+                data.claudeMcpPrompt ? `\n\`\`\`text\n${data.claudeMcpPrompt}\n\`\`\`` : "",
+                data.blenderBpyScript ? `\n\`\`\`python\n${data.blenderBpyScript}\n\`\`\`` : "",
+                Array.isArray(data.images) && data.images.length > 0
+                  ? data.images.slice(0, 4).map((img: string, idx: number) => {
+                      const angles = ["Front Angle (Panel & Display)", "Rear Angle (Terminals & Rail)", "Isometric Angle (3D Perspective)", "Side & Cutout Angle"];
+                      return `\n![${angles[idx] || `Orthographic Angle ${idx + 1}`}](${img})`;
+                    }).join("\n")
+                  : ""
+              ].filter(Boolean).join("\n\n");
+            }
 
             if (formattedOutput) {
               onToken(formattedOutput);
