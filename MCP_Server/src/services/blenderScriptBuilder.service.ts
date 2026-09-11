@@ -13,6 +13,7 @@ export interface BlenderPromptOutput {
 export class BlenderScriptBuilderService {
   /**
    * Constructs the phase-gated Blender MCP Master Prompt matching the standard specification structure.
+   * STRICT: Pure prompt specification for Claude in Blender MCP — ZERO python scripts included.
    */
   public buildMasterPrompt(specs: any, imageUrls: string[] = []): string {
     const mech = specs.mechanical || {};
@@ -391,80 +392,21 @@ PHASE 8: FINAL ASSEMBLY & QA
   }
 
   public build3DPrompt(specs: any, imageUrls: string[] = []): BlenderPromptOutput {
-    const mech = specs.mechanical || {};
-    const term = specs.terminals || {};
-    const disp = specs.displayAndControls || {};
-    const mat = specs.materialsAndShaders || {};
-
     const modelName = specs.modelName || 'Schneider Electric EasyLogic™ EM6436H LED';
     const lod = specs.lodLevel || 'LoD 3';
     const score = specs.completenessScore || 98;
 
     const masterPrompt = this.buildMasterPrompt(specs, imageUrls);
 
-    // Legacy compatibility fields
-    const markdownTable = `
-### 📐 Micro-Detailed Technical Specifications (${lod} - Completeness: ${score}%)
-
-| Category | Parameter | Extracted Value |
-| :--- | :--- | :--- |
-| **Mechanical** | Outer Dimensions ($W \\times H \\times D$) | **${mech.width_mm || 96} mm** $\\times$ **${mech.height_mm || 96} mm** $\\times$ **${mech.depth_mm || 101.5} mm** |
-| **Mechanical** | Panel Cutout ($W \\times H$) | **${mech.panelCutoutWidth_mm || 92} mm** $\\times$ **${mech.panelCutoutHeight_mm || 92} mm** |
-| **Mechanical** | Flange Step / Secondary Body | Flange: **${mech.bezelThickness_mm || 13.9} mm**, Body: **${mech.secondaryBody_mm || 90.5} mm** |
-| **Terminals** | Terminal Array Layout | **${term.totalCount || 14} Terminals** (V1-VN, L1-L2, I1-I3, RS485) |
-| **Display** | Display & Controls | 3 Rows LED + 12-LED Analog Load Bar, 4 Buttons, 2 Status LEDs |
-`;
-
-    const artDirectorBrief = masterPrompt;
-    const claudeMcpPrompt = masterPrompt;
-
-    const widthM = (mech.width_mm || 96) / 1000.0;
-    const heightM = (mech.height_mm || 96) / 1000.0;
-    const depthM = (mech.depth_mm || 101.5) / 1000.0;
-    const bezelM = (mech.bezelThickness_mm || 13.9) / 1000.0;
-    const bodyDepthM = (depthM - bezelM);
-    const bodyWM = (mech.secondaryBody_mm || 90.5) / 1000.0;
-
-    const blenderBpyScript = `import bpy
-import math
-
-# Clear factory scene objects
-bpy.ops.wm.read_factory_settings(use_empty=True)
-
-# Scene unit setup (1 unit = 1 mm)
-bpy.context.scene.unit_settings.system = 'METRIC'
-bpy.context.scene.unit_settings.scale_length = 0.001
-
-# Collections setup
-col_bezel = bpy.data.collections.new("EM6436_Bezel")
-col_body = bpy.data.collections.new("EM6436_Body")
-bpy.context.scene.collection.children.link(col_bezel)
-bpy.context.scene.collection.children.link(col_body)
-
-# Proxy Bezel (96x96x13.9mm)
-bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, ${bezelM / 2.0}, 0))
-bezel_proxy = bpy.context.active_object
-bezel_proxy.name = "EM6436_Bezel_Proxy"
-bezel_proxy.dimensions = (${widthM}, ${bezelM}, ${heightM})
-
-# Proxy Body (90.5x90.5x87.6mm)
-bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, ${bezelM + bodyDepthM / 2.0}, 0))
-body_proxy = bpy.context.active_object
-body_proxy.name = "EM6436_Body_Proxy"
-body_proxy.dimensions = (${bodyWM}, ${bodyDepthM}, ${bodyWM})
-
-print("✅ EM6436H Phase 1 Blocking Proxy Initialized Successfully!")
-`;
-
     return {
       modelName,
       lodLevel: lod,
       completenessScore: score,
       masterPrompt,
-      markdownTable,
-      artDirectorBrief,
-      claudeMcpPrompt,
-      blenderBpyScript,
+      markdownTable: "",
+      artDirectorBrief: "",
+      claudeMcpPrompt: "",
+      blenderBpyScript: "",
       images: imageUrls,
     };
   }

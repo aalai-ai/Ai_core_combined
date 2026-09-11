@@ -36,6 +36,8 @@ export async function streamAgent(
   console.log("[streamAgent] stream created successfully");
 
   let count = 0;
+  let masterPromptStreamed = false;
+
   for await (const chunk of stream) {
     count++;
     const [msg, metadata] = Array.isArray(chunk) ? chunk : [chunk, {}];
@@ -47,8 +49,11 @@ export async function streamAgent(
 
       // 1. If it's an AI message text token
       if (msgType === "ai" || (!msgType && msg.constructor?.name?.includes("AI"))) {
-        if ((msg as any).content) {
-          onToken((msg as any).content.toString());
+        // If master prompt was already streamed, suppress duplicate AI synthesis text
+        if (!masterPromptStreamed) {
+          if ((msg as any).content) {
+            onToken((msg as any).content.toString());
+          }
         }
 
         const toolCalls = (msg as any).tool_calls || (msg as any).additional_kwargs?.tool_calls;
@@ -68,25 +73,12 @@ export async function streamAgent(
             let formattedOutput = "";
             if (data.masterPrompt) {
               formattedOutput = data.masterPrompt;
-              if (Array.isArray(data.images) && data.images.length > 0) {
-                const imgGallery = data.images.slice(0, 4).map((img: string, idx: number) => {
-                  const angles = ["Front View (Panel & Display)", "Rear View (Terminals & Wiring)", "Side Profile (Flange & Retainer Clip)", "Perspective (Isometric Angle)"];
-                  return `\n![${angles[idx] || `Reference Image ${idx + 1}`}](${img})`;
-                }).join("\n");
-                formattedOutput += `\n\n### 4. Reference Images & Drawings\n${imgGallery}`;
-              }
+              masterPromptStreamed = true;
             } else {
               formattedOutput = [
                 data.artDirectorBrief || "",
                 data.markdownTable || "",
                 data.claudeMcpPrompt ? `\n\`\`\`text\n${data.claudeMcpPrompt}\n\`\`\`` : "",
-                data.blenderBpyScript ? `\n\`\`\`python\n${data.blenderBpyScript}\n\`\`\`` : "",
-                Array.isArray(data.images) && data.images.length > 0
-                  ? data.images.slice(0, 4).map((img: string, idx: number) => {
-                      const angles = ["Front Angle (Panel & Display)", "Rear Angle (Terminals & Rail)", "Isometric Angle (3D Perspective)", "Side & Cutout Angle"];
-                      return `\n![${angles[idx] || `Orthographic Angle ${idx + 1}`}](${img})`;
-                    }).join("\n")
-                  : ""
               ].filter(Boolean).join("\n\n");
             }
 

@@ -142,6 +142,15 @@ export async function createAgent(tools: any[]) {
     return END;
   }
 
+    function routeAfterTools(state: typeof MessagesAnnotation.State): "documentAgent" | typeof END {
+    const lastMsg = state.messages[state.messages.length - 1];
+    const toolName = (lastMsg as any)?.name;
+    if (toolName === "generate_3d_prompt") {
+      return END;
+    }
+    return "documentAgent";
+  }
+
   // Compile StateGraph structure (Streamlined 1-turn generation graph!)
   const workflow = new StateGraph(MessagesAnnotation)
     .addNode("documentAgent", documentAgentNode)
@@ -159,7 +168,10 @@ export async function createAgent(tools: any[]) {
       tools: "tools",
       __end__: END,
     })
-    .addEdge("tools", "documentAgent");
+    .addConditionalEdges("tools", routeAfterTools, {
+      documentAgent: "documentAgent",
+      __end__: END,
+    });
 
   return workflow.compile();
 }
