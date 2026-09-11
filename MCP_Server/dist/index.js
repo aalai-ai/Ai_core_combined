@@ -156,8 +156,8 @@ Parameters:
                         },
                     },
                     required: ["query"],
-                    additionalProperties: false
-                }
+                    additionalProperties: false,
+                },
             },
             {
                 name: "generate_3d_mesh",
@@ -385,23 +385,16 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
             }
             let imageUrls = [];
             try {
-                const imagesRes = await fetch(`${parserUrl}/documents?mime=image`);
+                const fetchUrl = documentId
+                    ? `${parserUrl}/documents?mime=image&documentId=${encodeURIComponent(documentId)}`
+                    : `${parserUrl}/documents?mime=image`;
+                const imagesRes = await fetch(fetchUrl);
                 if (imagesRes.ok) {
                     const imagesData = await imagesRes.json();
                     if (imagesData.success && Array.isArray(imagesData.documents) && imagesData.documents.length > 0) {
-                        const rawImgs = imagesData.documents.map((img) => `http://localhost:5100/uploads/${img.filePath}`);
-                        if (rawImgs.length > 4) {
-                            const step = Math.floor(rawImgs.length / 4);
-                            imageUrls = [
-                                rawImgs[0],
-                                rawImgs[Math.min(step, rawImgs.length - 1)],
-                                rawImgs[Math.min(step * 2, rawImgs.length - 1)],
-                                rawImgs[Math.min(step * 3, rawImgs.length - 1)],
-                            ];
-                        }
-                        else {
-                            imageUrls = rawImgs;
-                        }
+                        const rawImgs = imagesData.documents.map((img) => `http://localhost:5100/uploads/${img.filePath || img.storedName}`);
+                        // At most 4 extracted images from the document file
+                        imageUrls = rawImgs.slice(0, 4);
                     }
                 }
             }
@@ -436,8 +429,8 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
             };
         }
     }
-    if (request.params.name === "generate_3d_mesh") {
-        const { prompt, engine, image_paths } = request.params.arguments;
+    if (name === "generate_3d_mesh") {
+        const { prompt, engine, image_paths } = (args || {});
         try {
             const meshGeneratorUrl = (process.env.MESH_GENERATOR_URL || "http://localhost:5200").replace(/\/$/, "");
             const res = await fetch(`${meshGeneratorUrl}/generate-mesh`, {
@@ -446,7 +439,7 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                 body: JSON.stringify({
                     prompt,
                     engine: engine || process.env.DEFAULT_3D_MODEL_ENGINE || "hunyuan3d",
-                    image_paths: image_paths || []
+                    image_paths: image_paths || [],
                 }),
             });
             const data = await res.json();
@@ -456,12 +449,17 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
         }
         catch (err) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: err.message }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: false, error: err.message }),
+                    },
+                ],
             };
         }
     }
-    if (request.params.name === "evaluate_mesh_accuracy") {
-        const { meshId } = request.params.arguments;
+    if (name === "evaluate_mesh_accuracy") {
+        const { meshId } = (args || {});
         try {
             const evaluator = new (require("./services/meshAccuracyEvaluator.service").MeshAccuracyEvaluatorService)();
             const report = await evaluator.evaluateMeshFidelity({
@@ -469,12 +467,19 @@ server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
                 rear: `http://localhost:5200/snapshots/${meshId}_rear_180deg.jpg`,
             }, [], 1);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: true, report }) }],
+                content: [
+                    { type: "text", text: JSON.stringify({ success: true, report }) },
+                ],
             };
         }
         catch (err) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: err.message }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: false, error: err.message }),
+                    },
+                ],
             };
         }
     }

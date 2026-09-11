@@ -7,6 +7,7 @@ import { readFileToBuffer } from '../../utils/fileReader';
 import { BadRequestError } from '../../utils/errors';
 import { MinioService } from '../../utils/minio';
 import { config } from '../../config/config';
+import { DocumentModel, DocumentStatus } from '../../models/Document';
 import fs from 'fs';
 import path from 'path';
 
@@ -74,6 +75,28 @@ export class PdfParser implements DocumentParser {
               }
               const localPath = path.join(originalUploadsDir, storedFileName);
               await fs.promises.writeFile(localPath, img.buffer);
+            }
+
+            // Register extracted image in MongoDB Document collection
+            try {
+              const imgDocId = `${context.documentId}_img_p${pageNum}_${img.fileName}`;
+              await DocumentModel.create({
+                documentId: imgDocId,
+                originalName: img.fileName,
+                storedName: storedFileName,
+                filePath: storedFileName,
+                mimeType: 'image/png',
+                extension: '.png',
+                size: img.buffer.length,
+                uploadedAt: new Date(),
+                status: DocumentStatus.COMPLETED,
+                metadata: {
+                  parentDocumentId: context.documentId,
+                  page: pageNum,
+                }
+              });
+            } catch (dbErr: any) {
+              // Ignore duplicate key errors if re-processed
             }
 
             // If no section has been encountered yet, construct a default body section

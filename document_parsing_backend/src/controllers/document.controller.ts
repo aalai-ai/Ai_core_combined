@@ -14,6 +14,9 @@ import { VectorQueue } from '../vector/queue/vector.queue';
 import { VectorSyncService } from '../vector/services/vectorSync.service';
 import { VectorSyncStatus } from '../vector/models/vector.types';
 import { VectorMetricsTracker } from '../vector/utils/metrics';
+import { config } from '../config/config';
+import fs from 'fs';
+import path from 'path';
 
 export class DocumentController {
   private documentService: DocumentService;
@@ -655,11 +658,60 @@ export class DocumentController {
   ): Promise<void> => {
     try {
       const mime = req.query.mime as string;
+      const documentId = req.query.documentId as string;
       const filter: Record<string, any> = {};
+      
       if (mime) {
         filter.mimeType = { $regex: new RegExp(mime, 'i') };
       }
-      const docs = await this.documentRepository.find(filter);
+
+      if (documentId) {
+        const idRegex = new RegExp(documentId, 'i');
+        filter.$or = [
+          { documentId: documentId },
+          { storedName: { $regex: idRegex } },
+          { filePath: { $regex: idRegex } },
+          { documentName: { $regex: idRegex } },
+          { originalName: { $regex: idRegex } }
+        ];
+      }
+
+      const docs: any[] = await this.documentRepository.find(filter);
+
+      // Fallback: If documentId is passed and mime is image, also check disk uploads/original folder for extracted images
+      if (documentId && mime && mime.toLowerCase().includes('image')) {
+        try {
+          const originalUploadsDir = path.join(config.uploadsDir, 'original');
+          if (fs.existsSync(originalUploadsDir)) {
+            const files = await fs.promises.readdir(originalUploadsDir);
+            const matchingFiles = files.filter(f => 
+              f.toLowerCase().includes(documentId.toLowerCase()) && 
+              /\.(png|jpe?g|webp|gif)$/i.test(f)
+            );
+
+            for (const file of matchingFiles) {
+              const alreadyInDocs = docs.some(d => 
+                (d.storedName && d.storedName.includes(file)) || 
+                (d.filePath && d.filePath.includes(file))
+              );
+
+              if (!alreadyInDocs) {
+                docs.push({
+                  documentId: `${documentId}_extracted_${file}`,
+                  originalName: file,
+                  storedName: file,
+                  filePath: file,
+                  mimeType: 'image/png',
+                  status: 'COMPLETED'
+                });
+              }
+            }
+          }
+        } catch (fsErr) {
+          // Ignore fs fallback errors
+        }
+      }
+
       res.status(200).json({
         success: true,
         documents: docs,

@@ -428,22 +428,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       let imageUrls: string[] = [];
       try {
-        const imagesRes = await fetch(`${parserUrl}/documents?mime=image`);
+        const fetchUrl = documentId 
+          ? `${parserUrl}/documents?mime=image&documentId=${encodeURIComponent(documentId)}`
+          : `${parserUrl}/documents?mime=image`;
+          
+        const imagesRes = await fetch(fetchUrl);
         if (imagesRes.ok) {
           const imagesData = await imagesRes.json() as any;
           if (imagesData.success && Array.isArray(imagesData.documents) && imagesData.documents.length > 0) {
-            const rawImgs = imagesData.documents.map((img: any) => `http://localhost:5100/uploads/${img.filePath}`);
-            if (rawImgs.length > 4) {
-              const step = Math.floor(rawImgs.length / 4);
-              imageUrls = [
-                rawImgs[0],
-                rawImgs[Math.min(step, rawImgs.length - 1)],
-                rawImgs[Math.min(step * 2, rawImgs.length - 1)],
-                rawImgs[Math.min(step * 3, rawImgs.length - 1)],
-              ];
-            } else {
-              imageUrls = rawImgs;
-            }
+            const rawImgs = imagesData.documents.map((img: any) => `http://localhost:5100/uploads/${img.filePath || img.storedName}`);
+            // At most 4 extracted images from the document file
+            imageUrls = rawImgs.slice(0, 4);
           }
         }
       } catch (imgErr) {
